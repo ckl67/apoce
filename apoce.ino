@@ -7,7 +7,7 @@
 
 	ATTENTION:
 	===========
-		Il est impératif de configurer la partie Configuration ci-dessous !
+		Il est impératif de configurer la partie "Configuration" ci-dessous !
 		
     Principe
     =========
@@ -19,7 +19,7 @@
       * Signal pour piloter contacteur Chauffe Eau 2 - CA2
       * Signal pour piloter contacteur Chargement Voiture - CV
     Modes :
-		Dans le principe, un changement de mode, va éinitialiser le compteur d'armement
+		  Dans le principe, un changement de mode, va initialiser le compteur d'armement
 		
 	Les Modes disponibles :
       -------------------------------------------
@@ -74,7 +74,7 @@
 		    Si après NbPeriodeJour, il a y eu moins de Soleil que "QuotaMiniHeureSoleil"
 		    Alors, Nous nous replions vers le Mode JNR 
 		    Si après NbPeriodeJour, il a y plus de Soleil que "QuotaMiniHeureSoleil"
-		    Alors, Nous revenns vers le Mode SolCAVR 
+		    Alors, Nous revenons vers le Mode SolCAVR 
 
       -------------------------------------------
       * Bouton Armement pressé 1X --> Led Blanche Clignotante
@@ -95,15 +95,14 @@
  ================================================================== */
 // ===== PROTOTYPES ======
 
-void ActiveRelay(int);        // Active le relay
-void DeActiveRelay(int);      // Desactive le Relay
-void WorkMode_JN();           // Mode Nuit en même temps
-void WorkMode_JNR(int);       // Mode Nuit en Rotatif
-void WorkMode_ForceJNR(int);  // Mode Forcé Nuit en Rotatif (Emulation de la présence de courant de nuit)
-void WorkMode_SolCA();        // Mode Soleil : Uniquement Chauffe Eau rotatif
-void WorkMode_SolCAVR(int);   // Mode Soleil en Rotatif
-void WorkMode_Auto();         // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR
-void WorkMode_AutoR();        // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR, puis revenir en mode Auto
+void ActiveRelay(int);       // Active le relay
+void DeActiveRelay(int);     // Desactive le Relay
+void WorkMode_JN();          // Mode Nuit en même temps
+void WorkMode_JNR(int);      // Mode Nuit en Rotatif
+void WorkMode_SolCA();       // Mode Soleil : Uniquement Chauffe Eau rotatif
+void WorkMode_SolCAVR(int);  // Mode Soleil en Rotatif
+void WorkMode_Auto();        // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR
+void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR, puis revenir en mode Auto
 
 // ===== DEFINE ======
 
@@ -152,7 +151,7 @@ void WorkMode_AutoR();        // Mode Auto, qui après n heures sur m jours va p
 #define NormalTempoInterval false
 
 // MODE Debug  avec Sortie Série
-#define Debug_Mode_Serie true
+#define Debug_Mode_Serie false
 
 // Interval de clignottement LED
 //   Valeur multiplicateur en (s)
@@ -375,6 +374,13 @@ void loop() {
   // ----- Compteur Armement : Forcement Charge Voiture  ---------------------
   if (CurrentMillis - ArmVPreviousMillis >= ArmVDuration) {
     ArmVPreviousMillis = CurrentMillis;
+
+    // A la fin de la Temps,
+    // Dans le cas où nous étions en "Double Armement"
+    // Nous revenons vers le mode Sauvegardé
+    if (ArmDoubleTriggerStatus == true)
+      Mode = ModeSaved;
+
     ArmTriggerStatus = false;
     ArmDoubleTriggerStatus = false;
   }
@@ -531,23 +537,33 @@ void loop() {
     ButArmVisUp = digitalRead(ButArmV);
     if (!ButArmVisUp) {
 
-      if (ButSecondPush == false) {
-        ButSecondPush = true;
-
-        ArmDoubleTriggerStatus = true;
-        LedInterval = _LedIntervalFast;
-        Mode = ModeJNR;
-      } else {
+      if ((ArmDoubleTriggerStatus))
         ButSecondPush = false;
 
-        Mode = ModeSaved;
-        ArmDoubleTriggerStatus = false;
+      if (ButSecondPush == false) {
+        // Double appui sur Bouton Armement
+        ButSecondPush = true;
+
+        // Indique que nous sommes en Double Armement
+        ArmDoubleTriggerStatus = true;
+        LedInterval = _LedIntervalFast;
+
+        // Nous sauvegardons le Mode
+        ModeSaved = Mode;
+
+        // Nous forcons le mode JNR
+        Mode = ModeJNR;
+
+      } else {
+        // Mode Armemement Normal
+        ButSecondPush = false;
+
+        //ArmDoubleTriggerStatus = false;
         LedInterval = _LedIntervalSlow;
       }
 
-      if ((Mode != ModeJNR))
-        ButSecondPush = false;
 
+      // ModeArmement Normal
       ArmTriggerStatus = true;
 
       // Important ici on réinitialise le compteur d'armement
@@ -562,32 +578,26 @@ void loop() {
   switch (Mode) {
     case ModeJN:
       WorkMode_JN();
-      ModeSaved = ModeJN;
       break;
 
     case ModeJNR:
       WorkMode_JNR(LOW);
-      ModeSaved = ModeJNR;
       break;
 
     case ModeSolCA:
       WorkMode_SolCA();
-      ModeSaved = ModeSolCA;
       break;
 
     case ModeSolCAVR:
       WorkMode_SolCAVR(LOW);
-      ModeSaved = ModeSolAutoR;
       break;
 
     case ModeSolAuto:
       WorkMode_Auto();
-      ModeSaved = ModeSolAuto;
       break;
 
     case ModeSolAutoR:
       WorkMode_AutoR();
-      ModeSaved = ModeSolAutoR;
       break;
   }
 
@@ -688,7 +698,7 @@ void WorkMode_JNR(int ValLedModeSolAuto) {
 
   digitalWrite(LedModeJN, LedBlinkingState);
   digitalWrite(LedModeSolCAV, LOW);
-  digitalWrite(LedModeSolAuto, ValLedModeSolAuto);
+  digitalWrite(LedModeSolAuto, LOW);
 
   // Clignottement ou Non Led Armement
   if (ArmTriggerStatus)
@@ -697,7 +707,7 @@ void WorkMode_JNR(int ValLedModeSolAuto) {
     digitalWrite(LedArmV, LOW);
 
   // Contrôle sorties mode normal sans double Armement
-  if ((digitalRead(InCurrentJN) == HIGH)) {
+  if ((digitalRead(InCurrentJN) == HIGH) && (ArmDoubleTriggerStatus == false)) {
 
     if (SwitchContactSelection == 0) {
       ActiveRelay(OutCA1);
@@ -726,54 +736,35 @@ void WorkMode_JNR(int ValLedModeSolAuto) {
     }
 
   } else {
-    DeActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-    // A la place de DeActiveRelay(OutV);
-    if (ArmTriggerStatus) {
-      ActiveRelay(OutV);
+    // Double Armement
+    if (ArmDoubleTriggerStatus) {
+      if (SwitchContactSelection == 0) {
+        ActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        DeActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 1) {
+        DeActiveRelay(OutCA1);
+        ActiveRelay(OutCA2);
+        DeActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 2) {
+        DeActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
     } else {
-      DeActiveRelay(OutV);
+      DeActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+      // A la place de DeActiveRelay(OutV);
+      if (ArmTriggerStatus) {
+        ActiveRelay(OutV);
+      } else {
+        DeActiveRelay(OutV);
+      }
     }
   }
 }
-
-
-// -------------------------------------------------------------------------------------------
-// Particularité. Ce mode sera utilisé pour émuler la présence
-// de courant de nuit
-// Il sera activé uniquement dans le cas d'un deuxième appui sur le bouton Armement
-// -------------------------------------------------------------------------------------------
-
-void WorkMode_ForceJNR(int ValLedModeSolAuto) {
-
-  digitalWrite(LedModeJN, LedBlinkingState);
-  digitalWrite(LedModeSolCAV, LOW);
-  digitalWrite(LedModeSolAuto, LOW);
-
-  // Clignottement ou Non Led Armement
-  if (ArmTriggerStatus)
-    digitalWrite(LedArmV, LedArmVState);
-  else
-    digitalWrite(LedArmV, LOW);
-
-  if (SwitchContactSelection == 0) {
-    ActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-    DeActiveRelay(OutV);
-  }
-  if (SwitchContactSelection == 1) {
-    DeActiveRelay(OutCA1);
-    ActiveRelay(OutCA2);
-    DeActiveRelay(OutV);
-  }
-
-  if (SwitchContactSelection == 2) {
-    DeActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-    ActiveRelay(OutV);
-  }
-}
-
 
 // -------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------
