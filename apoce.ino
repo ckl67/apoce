@@ -4,6 +4,7 @@
     Date : 25 janvier 2024
     La simulation se trouve sur
     https://www.tinkercad.com/things/i7El4JjrINq-pilote-contacteur
+    L'Arduino Nano est basée sur l'ATmega328
 
 	ATTENTION:
 	===========
@@ -111,8 +112,25 @@ void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va pa
 #define BoardHardware 1
 
 // Broches Entrées
+// Les entrées sont protégée à travers un Optocoupleur
+// Nous mettons également une résistance Pull-Down 
+// voir commentaire ci-sessous
 #define InCurrentSol 2  // Entrée Lecture Consigne Puissance Soleil atteint
 #define InCurrentJN 3   // Entrée Lecture courant de Nuit
+
+// Les boutons sont en Pull UP
+// https://www.electrosoftcloud.com/en/arduino-pull-up-pull-down-resistors/
+// Une résistance interne de 20kΩ est connectée au 5v interne Arduino
+// Le bouton poussoir, qui vient après la résistance, est connecté sur l'entrée Arduino, et est relié par l'autre côté à la masse
+//   * appui      --> va ramener la tension à l'entrée à la masse
+//   * non appuié --> va maintenir la tension à 5V
+// Grâce à cela, nous n'avons plus besoin de résistance pull-up externe que nous pourrons économiser sur notre circuit.
+// Cette technique est utilisée en priorité pour éviter une entrée laissée en l’air qui peut avoir n’importe quelle valeur comprise entre 0 et 5 V 
+// https://www.locoduino.org/spip.php?article122
+// https://forum.arduino.cc/t/opto-4n35-on-arduino-digital-input-no-signal/93625
+// --> Etat haut inversé
+
+
 
 #define ButModeJN 4       // Bouton Mode Jour Nuit
 #define ButModeSolCAV 5   // Bouton Mode Soleil Chauffe Eau et Voiture
@@ -155,8 +173,8 @@ void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va pa
 
 // Interval de clignottement LED
 //   Valeur multiplicateur en (s)
-#define _LedIntervalSlow 1000ul * 1
-#define _LedIntervalFast 1000ul / 2
+#define LedIntervalSlow 1000ul * 1
+#define LedIntervalFast 1000ul / 2
 
 // Durée chargement de voiture en Mode forcé
 //   Valeur multiplicateur en (s)
@@ -214,10 +232,10 @@ void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va pa
 #define QuotaMiniHeureSoleil 4
 #endif
 
-// ======================================= VARIABLES  ===============================
+  // ======================================= VARIABLES  ===============================
 
-// Variable Buttons
-boolean ButModeJNwasUp;
+  // Variable Buttons
+  boolean ButModeJNwasUp;
 boolean ButModeSolCAVwasUp;
 boolean ButModeSolAutowasUp;
 boolean ButArmVwasUp;
@@ -230,7 +248,7 @@ unsigned long CurrentMillis;
 unsigned long LedPreviousMillis;
 
 // Variable clignottement Led
-int LedInterval = _LedIntervalSlow;
+int LedInterval = LedIntervalSlow;
 
 // Variable temps pour contrôler les contacteurs
 unsigned long SwitchContactPreviousMillis;
@@ -244,6 +262,10 @@ int SwitchContactSelection;
 
 // Etat Clignottement des LEDs
 int LedBlinkingState;  // LOW ou HIGH, Valeur de Clignottement de la Led
+
+// Switch pour changement clignottement Led en mode double Armement
+boolean SwitchLedIntervalFast;
+
 
 // Etat LED pour armement de la voiture
 int LedArmVState;  // LOW ou HIGH, Valeur de Clignottement de la Led
@@ -320,6 +342,9 @@ void setup() {
   LedPreviousMillis = CurrentMillis;
   LedArmVState = LOW;
 
+  // Switch pour changement clignottement Led en mode double Armement
+  SwitchLedIntervalFast = false;
+
   // Varaible pour led clignottement en fonctionnement Forcé
   LedBlinkingState = LOW;
 
@@ -369,13 +394,25 @@ void loop() {
     } else {
       LedArmVState = LOW;
     }
+
+    // Durée clignottement
+    if (ArmDoubleTriggerStatus)
+      if (SwitchLedIntervalFast) {
+        LedInterval = LedIntervalFast;
+        SwitchLedIntervalFast = false;
+      } else {
+        LedInterval = LedIntervalSlow;
+        SwitchLedIntervalFast = true;
+      }
+    else
+      LedInterval = LedIntervalSlow;
   }
 
   // ----- Compteur Armement : Forcement Charge Voiture  ---------------------
   if (CurrentMillis - ArmVPreviousMillis >= ArmVDuration) {
     ArmVPreviousMillis = CurrentMillis;
 
-    // A la fin de la Temps,
+    // A la fin de la Tempo,
     // Dans le cas où nous étions en "Double Armement"
     // Nous revenons vers le mode Sauvegardé
     if (ArmDoubleTriggerStatus == true)
@@ -399,7 +436,14 @@ void loop() {
   }
 
   // ---- Lecture Etat Bouton
-  // Attention nous sommes en PULLUP, donc valeur actif = 0 !
+  // Attention nous sommes en mode PULLUP --> valeur actif = 0 !
+  // Le mode INPUT_PULLUP est disponible sur les broches de l'Arduino.
+  // Une résistance interne de 20kΩ est connectée au 5v interne Arduino
+  // Le bouton poussoir, qui vient après la résistance, est connecté sur l'entrée Arduino, et est relié par l'autre côté à la masse
+  //   * appui      --> va ramener la tension à l'entrée à la masse
+  //   * non appuié --> va maintenir la tension à 5V
+  // Grâce à cela, nous n'avons plus besoin de résistance pull-up externe que nous pourrons économiser sur notre circuit.
+
   boolean ButModeJNisUp = digitalRead(ButModeJN);
   boolean ButModeSolAutoisUp = digitalRead(ButModeSolAuto);
   boolean ButModeSolCAVisUp = digitalRead(ButModeSolCAV);
@@ -546,7 +590,6 @@ void loop() {
 
         // Indique que nous sommes en Double Armement
         ArmDoubleTriggerStatus = true;
-        LedInterval = _LedIntervalFast;
 
         // Nous sauvegardons le Mode
         ModeSaved = Mode;
@@ -557,13 +600,9 @@ void loop() {
       } else {
         // Mode Armemement Normal
         ButSecondPush = false;
-
-        //ArmDoubleTriggerStatus = false;
-        LedInterval = _LedIntervalSlow;
       }
 
-
-      // ModeArmement Normal
+      // ModeArmement Normal (Dans tous les cas)
       ArmTriggerStatus = true;
 
       // Important ici on réinitialise le compteur d'armement
