@@ -21,7 +21,7 @@
       * Signal pour piloter contacteur Chauffe Eau 2 - CA2
       * Signal pour piloter contacteur Chargement Voiture - CV
     Modes :
-		  Dans le principe, un changement de mode, va initialiser le compteur d'armement
+		  Dans le principe, un changement de mode, va re-initialiser le compteur d'armement
 		
 	Les Modes disponibles :
 
@@ -29,9 +29,9 @@
       * Mode basculement Valeur des Tempos
       -------------------------------------------
       Un appui simultanément sur les 3 premiers boutons permet de modifier 
-	  la valeurs des tempos 
+	    la valeurs des tempos, entre  
 	    * Mode Réel
-		* Mode simulation
+		  * Mode simulation
       
       -------------------------------------------
       * Mode JN : Jour-Nuit --> Led : Bleue Allumée
@@ -231,6 +231,7 @@ boolean ButModeSolCAVwasUp;
 boolean ButModeSolAutowasUp;
 boolean ButArmVwasUp;
 boolean ButSecondPush;
+boolean ButModeDynChangeTempowasUp;
 
 // Temps
 unsigned long CurrentMillis;
@@ -243,7 +244,6 @@ unsigned long val_PeriodeJourInterval;
 unsigned long val_PeriodeHeureSoleilInterval;
 unsigned long val_NbPeriodeJourModeAuto;
 unsigned long val_QuotaMiniHeureSoleil;
-
 
 // Variable "temps" pour contôler clignottement de toutes les LEDs
 unsigned long LedPreviousMillis;
@@ -292,8 +292,7 @@ unsigned long PeriodeHeureSoleilPreviousMillis;
 unsigned long QuotaHeureSoleil;
 
 // En relation avec le mode Auto
-//    Dépassement Quota, pour indiquer que l'on ne respecte pas
-//    la durée de soleil
+//    Dépassement Quota, pour indiquer que l'on ne respecte pas la durée de soleil
 boolean DepassementQuota;
 
 
@@ -373,6 +372,7 @@ void setup() {
   ButModeSolCAVwasUp = true;
   ButArmVwasUp = true;
   ButSecondPush = true;
+  ButModeDynChangeTempowasUp = true;
 
   // Variable Mode Auto
   QuotaHeureSoleil = 0;
@@ -461,17 +461,17 @@ void loop() {
   // --------------------------------------------------
   // Cas particulier ou 3 boutons appuiés en même temps
   // --------------------------------------------------
-  if (!ButModeJNisUp && !ButModeSolCAVisUp && !ButModeSolAutoisUp) {
+  if (ButModeDynChangeTempowasUp && !ButModeJNisUp && !ButModeSolCAVisUp && !ButModeSolAutoisUp) {
     delay(10);
     ButModeJNisUp = digitalRead(ButModeJN);
     ButModeSolCAVisUp = digitalRead(ButModeSolCAV);
     ButModeSolAutoisUp = digitalRead(ButModeSolAuto);
 
     if (!ButModeJNisUp && !ButModeSolCAVisUp && !ButModeSolAutoisUp) {
-      // Deux boutons
       Mode = ModeDynChangeTempo;
     }
   }
+  ButModeDynChangeTempowasUp = ButModeJNisUp & ButModeSolCAVisUp & ButModeSolAutoisUp;  // = true dès les boutons relachés , pour éviter re-entrer dans la procédure durnat l'appui
 
   // --------------------------
   // si bouton Mode JN pressé
