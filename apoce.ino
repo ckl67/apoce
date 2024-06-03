@@ -231,7 +231,7 @@ boolean ButModeSolCAVwasUp;
 boolean ButModeSolAutowasUp;
 boolean ButArmVwasUp;
 boolean ButSecondPush;
-boolean ButModeDynChangeTempowasUp;
+boolean ButModeDynChangeOneShot;
 
 // Temps
 unsigned long CurrentMillis;
@@ -372,7 +372,7 @@ void setup() {
   ButModeSolCAVwasUp = true;
   ButArmVwasUp = true;
   ButSecondPush = true;
-  ButModeDynChangeTempowasUp = true;
+  ButModeDynChangeOneShot = true;
 
   // Variable Mode Auto
   QuotaHeureSoleil = 0;
@@ -461,7 +461,7 @@ void loop() {
   // --------------------------------------------------
   // Cas particulier ou 3 boutons appuiés en même temps
   // --------------------------------------------------
-  if (ButModeDynChangeTempowasUp && !ButModeJNisUp && !ButModeSolCAVisUp && !ButModeSolAutoisUp) {
+  if (ButModeDynChangeOneShot && !ButModeJNisUp && !ButModeSolCAVisUp && !ButModeSolAutoisUp) {
     delay(10);
     ButModeJNisUp = digitalRead(ButModeJN);
     ButModeSolCAVisUp = digitalRead(ButModeSolCAV);
@@ -471,7 +471,6 @@ void loop() {
       Mode = ModeDynChangeTempo;
     }
   }
-  ButModeDynChangeTempowasUp = ButModeJNisUp & ButModeSolCAVisUp & ButModeSolAutoisUp;  // = true dès les boutons relachés , pour éviter re-entrer dans la procédure durnat l'appui
 
   // --------------------------
   // si bouton Mode JN pressé
@@ -506,13 +505,15 @@ void loop() {
     PeriodeHeureSoleilPreviousMillis = CurrentMillis;
     NbPeriodeJour = 0;
     PeriodeJourPreviousMillis = CurrentMillis;
+    ButModeDynChangeOneShot = true;
+
 
     DeActiveRelay(OutCA1);
     DeActiveRelay(OutCA2);
     DeActiveRelay(OutV);
     delay(10);
   }
-  ButModeJNwasUp = ButModeJNisUp;  // = true dès le bouton relaché  --> mémorise l'état inverse du bouton
+  ButModeJNwasUp = ButModeJNisUp;  // true = bouton relaché  --> mémorise l'état
 
 
   // --------------------------
@@ -554,7 +555,7 @@ void loop() {
       delay(10);
     }
   }
-  ButModeSolCAVwasUp = ButModeSolCAVisUp;  // = true dès le bouton relaché  --> mémorise l'état inverse du bouton
+  ButModeSolCAVwasUp = ButModeSolCAVisUp;  // = true bouton relaché  --> mémorise l'état
 
   // --------------------------
   // si bouton Mode Auto pressé
@@ -589,13 +590,14 @@ void loop() {
       NbPeriodeJour = 0;
       PeriodeJourPreviousMillis = CurrentMillis;
 
+
       DeActiveRelay(OutCA1);
       DeActiveRelay(OutCA2);
       DeActiveRelay(OutV);
       delay(10);
     }
   }
-  ButModeSolAutowasUp = ButModeSolAutoisUp;  // = true dès le bouton relaché  --> mémorise l'état inverse du bouton
+  ButModeSolAutowasUp = ButModeSolAutoisUp;  // = true bouton relaché  --> mémorise l'état
 
   // --------------------------
   // si bouton ArmState pressé
@@ -633,7 +635,7 @@ void loop() {
       ArmVPreviousMillis = CurrentMillis;
     }
   }
-  ButArmVwasUp = ButArmVisUp;  // = true dès le bouton relaché  --> mémorise l'état inverse du bouton
+  ButArmVwasUp = ButArmVisUp;  // = true bouton relaché  --> mémorise l'état
 
   // -----------------------------------------------------------
   //  -------------------------- Automate  ---------------------
@@ -738,24 +740,23 @@ void WorkMode_DynChangeTempo() {
   }
 
   if (NormalTempoInterval) {
-    val_ArmVDuration = ArmVDuration_Real;
-    val_SwitchContactInterval = SwitchContactInterval_Real;
-    val_PeriodeJourInterval = PeriodeJourInterval_Real;
-    val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Real;
-    val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Real;
-    val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Real;
-    NormalTempoInterval = false;
-
-  } else {
     val_ArmVDuration = ArmVDuration_Simul;
     val_SwitchContactInterval = SwitchContactInterval_Simul;
     val_PeriodeJourInterval = PeriodeJourInterval_Simul;
     val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Simul;
     val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Simul;
     val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Simul;
+    NormalTempoInterval = false;
+  } else {
+    val_ArmVDuration = ArmVDuration_Real;
+    val_SwitchContactInterval = SwitchContactInterval_Real;
+    val_PeriodeJourInterval = PeriodeJourInterval_Real;
+    val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Real;
+    val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Real;
+    val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Real;
     NormalTempoInterval = true;
   }
-
+  ButModeDynChangeOneShot = false;
   Mode = ModeJN;
 }
 
