@@ -2,6 +2,7 @@
 	Pilote Arduino pour optimiser la gestion de consommation électrique
     Christian Klugesherz
     Date : 25 janvier 2024
+    Le schéma de la carte se trouve dans le répertoire Board
     La simulation se trouve sur
     https://www.tinkercad.com/things/i7El4JjrINq-pilote-contacteur
     L'Arduino Nano est basée sur l'ATmega328
@@ -23,6 +24,15 @@
 		  Dans le principe, un changement de mode, va initialiser le compteur d'armement
 		
 	Les Modes disponibles :
+
+      -------------------------------------------
+      * Mode basculement Valeur des Tempos
+      -------------------------------------------
+      Un appui simultanément sur les 3 premiers boutons permet de modifier 
+	  la valeurs des tempos 
+	    * Mode Réel
+		* Mode simulation
+      
       -------------------------------------------
       * Mode JN : Jour-Nuit --> Led : Bleue Allumée
       --------------------------------------------
@@ -96,14 +106,15 @@
  ================================================================== */
 // ===== PROTOTYPES ======
 
-void ActiveRelay(int);       // Active le relay
-void DeActiveRelay(int);     // Desactive le Relay
-void WorkMode_JN();          // Mode Nuit en même temps
-void WorkMode_JNR(int);      // Mode Nuit en Rotatif
-void WorkMode_SolCA();       // Mode Soleil : Uniquement Chauffe Eau rotatif
-void WorkMode_SolCAVR(int);  // Mode Soleil en Rotatif
-void WorkMode_Auto();        // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR
-void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR, puis revenir en mode Auto
+void ActiveRelay(int);           // Active le relay
+void DeActiveRelay(int);         // Desactive le Relay
+void WorkMode_JN();              // Mode Nuit en même temps
+void WorkMode_JNR(int);          // Mode Nuit en Rotatif
+void WorkMode_SolCA();           // Mode Soleil : Uniquement Chauffe Eau rotatif
+void WorkMode_SolCAVR(int);      // Mode Soleil en Rotatif
+void WorkMode_Auto();            // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR
+void WorkMode_AutoR();           // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR, puis revenir en mode Auto
+void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur des tempos
 
 // ===== DEFINE ======
 
@@ -113,7 +124,7 @@ void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va pa
 
 // Broches Entrées
 // Les entrées sont protégée à travers un Optocoupleur
-// Nous mettons également une résistance Pull-Down 
+// Nous mettons également une résistance Pull-Down
 // voir commentaire ci-sessous
 #define InCurrentSol 2  // Entrée Lecture Consigne Puissance Soleil atteint
 #define InCurrentJN 3   // Entrée Lecture courant de Nuit
@@ -125,12 +136,10 @@ void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va pa
 //   * appui      --> va ramener la tension à l'entrée à la masse
 //   * non appuié --> va maintenir la tension à 5V
 // Grâce à cela, nous n'avons plus besoin de résistance pull-up externe que nous pourrons économiser sur notre circuit.
-// Cette technique est utilisée en priorité pour éviter une entrée laissée en l’air qui peut avoir n’importe quelle valeur comprise entre 0 et 5 V 
+// Cette technique est utilisée en priorité pour éviter une entrée laissée en l’air qui peut avoir n’importe quelle valeur comprise entre 0 et 5 V
 // https://www.locoduino.org/spip.php?article122
 // https://forum.arduino.cc/t/opto-4n35-on-arduino-digital-input-no-signal/93625
 // --> Etat haut inversé
-
-
 
 #define ButModeJN 4       // Bouton Mode Jour Nuit
 #define ButModeSolCAV 5   // Bouton Mode Soleil Chauffe Eau et Voiture
@@ -148,28 +157,29 @@ void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va pa
 #define OutV 10   // Sortie pour piloter contacteur Voiture
 
 // Modes
-#define ModeJN 0        // Mode Jour-Nuit
-#define ModeJNR 1       // Mode Jour-Nuit Rotatif
-#define ModeSolCA 2     // Mode Soleil Chauffe Eau -- Nuit : Voiture
-#define ModeSolCAVR 3   // Mode Soleil Chauffe Eau Voiture Rotatif
-#define ModeSolAuto 4   // Mode Auto
-#define ModeSolAutoR 5  // Mode Auto avec retour en arrière vers mode Auto
+#define ModeJN 0              // Mode Jour-Nuit
+#define ModeJNR 1             // Mode Jour-Nuit Rotatif
+#define ModeSolCA 2           // Mode Soleil Chauffe Eau -- Nuit : Voiture
+#define ModeSolCAVR 3         // Mode Soleil Chauffe Eau Voiture Rotatif
+#define ModeSolAuto 4         // Mode Auto
+#define ModeSolAutoR 5        // Mode Auto avec retour en arrière vers mode Auto
+#define ModeDynChangeTempo 6  // Mode Changement tempo dynamique
 
 // ----------------------------------------------------
 // ----------------------------------------------------
-//                      CONFIGURATIONS
+//                  DEBUT - CONFIGURATIONS
 // ----------------------------------------------------
 // ----------------------------------------------------
 // Type de Carte : Simulation TinkerPad ou Carte Réelle
 //    Choix entre : BoardTinkercad / BoardHardware
 #define BoardType BoardTinkercad
 
-// Mode pour l'Interval pour les tempos
-//    Choix : Pour la production = true - Pour la simulation = false
-#define NormalTempoInterval false
-
 // MODE Debug  avec Sortie Série
-#define Debug_Mode_Serie false
+#define Debug_Mode_Serie true
+
+// ----------------------------------------------------
+//                   FIN - CONFIGURATIONS
+// ----------------------------------------------------
 
 // Interval de clignottement LED
 //   Valeur multiplicateur en (s)
@@ -179,63 +189,44 @@ void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va pa
 // Durée chargement de voiture en Mode forcé
 //   Valeur multiplicateur en (s)
 //   --> 6 heures = (3600 * 6)
-#if NormalTempoInterval
-#define ArmVDuration 1000ul * (3600 * 6)
-#else
-#define ArmVDuration 1000ul * (20)
-#endif
+#define ArmVDuration_Real 1000ul * (3600 * 6)
+#define ArmVDuration_Simul 1000ul * (20)
 
 // Interval de basculement entre les contacteurs
 //   Valeur multiplicateur en (s)
 //   En référence aux 8 heures de courant de nuit
 //   --> 15 minutes entre basculement (60 * 15)
-#if NormalTempoInterval
-#define SwitchContactInterval 1000ul * (60 * 15)
-#else
-#define SwitchContactInterval 1000ul * (3)
-#endif
+#define SwitchContactInterval_Real 1000ul * (60 * 15)
+#define SwitchContactInterval_Simul 1000ul * (3)
 
 // Définit la durée d'interval représentant 1 Jour
 // Défaut = 1000ul * (60 * 60 * 24) = 86400000ul
-#if NormalTempoInterval
-#define PeriodeJourInterval 1000ul * (60 * 60 * 24)
-#else
-#define PeriodeJourInterval 1000ul * (15)
-#endif
+#define PeriodeJourInterval_Real 1000ul * (60 * 60 * 24)
+#define PeriodeJourInterval_Simul 1000ul * (15)
 
 // Définit la durée d'interval représentant 1 Heure
 // Défaut = 1000ul * (60 * 60) = 3600000ul
-#if NormalTempoInterval
-#define PeriodeHeureSoleilInterval 1000ul * (60 * 60)
-#else
-#define PeriodeHeureSoleilInterval 1000ul * 5
-#endif
+#define PeriodeHeureSoleilInterval_Real 1000ul * (60 * 60)
+#define PeriodeHeureSoleilInterval_Simul 1000ul * 5
 
 // Définit la durée de Période jour en mode auto
 // Nous faisons un test au bout de 7 jours pour voir si nous avons eu
 // assez de Soleil sur cette période --> Par Défaut 7 jours
-#if NormalTempoInterval
-#define NbPeriodeJourModeAuto 7
-#else
-#define NbPeriodeJourModeAuto 3
-#endif
+#define NbPeriodeJourModeAuto_Real 7
+#define NbPeriodeJourModeAuto_Simul 3
 
 // Nombre d'heure de soleil
 // Définit la durée minimale d'heure de soleil sur
 // la période NbPeriodeJourModeAuto avant de basculer en mode JNR
 // Pour NbPeriodeJourModeAuto : 7 Jours = 56 Heures de soleil Max,
 // il faudrait au moins 24 Heures de Soleil = 6 heures pour chauffer les CA
-//
-#if NormalTempoInterval
-#define QuotaMiniHeureSoleil 24
-#else
-#define QuotaMiniHeureSoleil 4
-#endif
+#define QuotaMiniHeureSoleil_Real 24
+#define QuotaMiniHeureSoleil_Simul 4
 
-  // ======================================= VARIABLES  ===============================
+// ======================================= VARIABLES  ===============================
 
-  // Variable Buttons
-  boolean ButModeJNwasUp;
+// Variable Buttons
+boolean ButModeJNwasUp;
 boolean ButModeSolCAVwasUp;
 boolean ButModeSolAutowasUp;
 boolean ButArmVwasUp;
@@ -243,6 +234,16 @@ boolean ButSecondPush;
 
 // Temps
 unsigned long CurrentMillis;
+
+// Tempos
+boolean NormalTempoInterval;
+unsigned long val_ArmVDuration;
+unsigned long val_SwitchContactInterval;
+unsigned long val_PeriodeJourInterval;
+unsigned long val_PeriodeHeureSoleilInterval;
+unsigned long val_NbPeriodeJourModeAuto;
+unsigned long val_QuotaMiniHeureSoleil;
+
 
 // Variable "temps" pour contôler clignottement de toutes les LEDs
 unsigned long LedPreviousMillis;
@@ -265,7 +266,6 @@ int LedBlinkingState;  // LOW ou HIGH, Valeur de Clignottement de la Led
 
 // Switch pour changement clignottement Led en mode double Armement
 boolean SwitchLedIntervalFast;
-
 
 // Etat LED pour armement de la voiture
 int LedArmVState;  // LOW ou HIGH, Valeur de Clignottement de la Led
@@ -330,6 +330,15 @@ void setup() {
 
   // Temps
   CurrentMillis = 0;
+
+  // Tempos
+  NormalTempoInterval = true;
+  val_ArmVDuration = ArmVDuration_Real;
+  val_SwitchContactInterval = SwitchContactInterval_Real;
+  val_PeriodeJourInterval = PeriodeJourInterval_Real;
+  val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Real;
+  val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Real;
+  val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Real;
 
   // En relation avec le mode Auto
   DepassementQuota = 0;
@@ -409,7 +418,7 @@ void loop() {
   }
 
   // ----- Compteur Armement : Forcement Charge Voiture  ---------------------
-  if (CurrentMillis - ArmVPreviousMillis >= ArmVDuration) {
+  if (CurrentMillis - ArmVPreviousMillis >= val_ArmVDuration) {
     ArmVPreviousMillis = CurrentMillis;
 
     // A la fin de la Tempo,
@@ -423,7 +432,7 @@ void loop() {
   }
 
   // ----- Compteur Switch entre CA1, CA2 et Voiture ---------------------
-  if (CurrentMillis - SwitchContactPreviousMillis >= SwitchContactInterval) {
+  if (CurrentMillis - SwitchContactPreviousMillis >= val_SwitchContactInterval) {
     SwitchContactPreviousMillis = CurrentMillis;
     SwitchContactSelection = SwitchContactSelection + 1;
     if (Mode == ModeJN) {
@@ -445,9 +454,24 @@ void loop() {
   // Grâce à cela, nous n'avons plus besoin de résistance pull-up externe que nous pourrons économiser sur notre circuit.
 
   boolean ButModeJNisUp = digitalRead(ButModeJN);
-  boolean ButModeSolAutoisUp = digitalRead(ButModeSolAuto);
   boolean ButModeSolCAVisUp = digitalRead(ButModeSolCAV);
+  boolean ButModeSolAutoisUp = digitalRead(ButModeSolAuto);
   boolean ButArmVisUp = digitalRead(ButArmV);
+
+  // --------------------------------------------------
+  // Cas particulier ou 3 boutons appuiés en même temps
+  // --------------------------------------------------
+  if (!ButModeJNisUp && !ButModeSolCAVisUp && !ButModeSolAutoisUp) {
+    delay(10);
+    ButModeJNisUp = digitalRead(ButModeJN);
+    ButModeSolCAVisUp = digitalRead(ButModeSolCAV);
+    ButModeSolAutoisUp = digitalRead(ButModeSolAuto);
+
+    if (!ButModeJNisUp && !ButModeSolCAVisUp && !ButModeSolAutoisUp) {
+      // Deux boutons
+      Mode = ModeDynChangeTempo;
+    }
+  }
 
   // --------------------------
   // si bouton Mode JN pressé
@@ -488,7 +512,7 @@ void loop() {
     DeActiveRelay(OutV);
     delay(10);
   }
-  ButModeJNwasUp = ButModeJNisUp;  // mémoriser l'état du bouton
+  ButModeJNwasUp = ButModeJNisUp;  // = true dès le bouton relaché  --> mémorise l'état inverse du bouton
 
 
   // --------------------------
@@ -530,7 +554,7 @@ void loop() {
       delay(10);
     }
   }
-  ButModeSolCAVwasUp = ButModeSolCAVisUp;  // mémoriser l'état du bouton
+  ButModeSolCAVwasUp = ButModeSolCAVisUp;  // = true dès le bouton relaché  --> mémorise l'état inverse du bouton
 
   // --------------------------
   // si bouton Mode Auto pressé
@@ -571,7 +595,7 @@ void loop() {
       delay(10);
     }
   }
-  ButModeSolAutowasUp = ButModeSolAutoisUp;  // mémoriser l'état du bouton
+  ButModeSolAutowasUp = ButModeSolAutoisUp;  // = true dès le bouton relaché  --> mémorise l'état inverse du bouton
 
   // --------------------------
   // si bouton ArmState pressé
@@ -609,7 +633,7 @@ void loop() {
       ArmVPreviousMillis = CurrentMillis;
     }
   }
-  ButArmVwasUp = ButArmVisUp;  // mémoriser l'état du bouton
+  ButArmVwasUp = ButArmVisUp;  // = true dès le bouton relaché  --> mémorise l'état inverse du bouton
 
   // -----------------------------------------------------------
   //  -------------------------- Automate  ---------------------
@@ -637,6 +661,14 @@ void loop() {
 
     case ModeSolAutoR:
       WorkMode_AutoR();
+      break;
+
+    case ModeDynChangeTempo:
+      WorkMode_DynChangeTempo();
+      break;
+
+    default:
+      WorkMode_JN();
       break;
   }
 
@@ -688,6 +720,45 @@ void DeActiveRelay(int pin) {
     digitalWrite(pin, LOW);
   }
 }
+
+// -------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------
+void WorkMode_DynChangeTempo() {
+  int i;
+
+  for (i = 0; i < 5; i++) {
+    digitalWrite(LedModeJN, HIGH);
+    digitalWrite(LedModeSolCAV, HIGH);
+    digitalWrite(LedModeSolAuto, HIGH);
+    delay(500);
+    digitalWrite(LedModeJN, LOW);
+    digitalWrite(LedModeSolCAV, LOW);
+    digitalWrite(LedModeSolAuto, LOW);
+    delay(500);
+  }
+
+  if (NormalTempoInterval) {
+    val_ArmVDuration = ArmVDuration_Real;
+    val_SwitchContactInterval = SwitchContactInterval_Real;
+    val_PeriodeJourInterval = PeriodeJourInterval_Real;
+    val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Real;
+    val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Real;
+    val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Real;
+    NormalTempoInterval = false;
+
+  } else {
+    val_ArmVDuration = ArmVDuration_Simul;
+    val_SwitchContactInterval = SwitchContactInterval_Simul;
+    val_PeriodeJourInterval = PeriodeJourInterval_Simul;
+    val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Simul;
+    val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Simul;
+    val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Simul;
+    NormalTempoInterval = true;
+  }
+
+  Mode = ModeJN;
+}
+
 
 // -------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------
@@ -920,14 +991,14 @@ void WorkMode_Auto() {
     // Le test pour rester dans le Mode SolCAV est uniquemenf fait 1 seul fois !
 
     // Compte Nombre de Période Jour
-    if (CurrentMillis - PeriodeJourPreviousMillis >= PeriodeJourInterval) {
+    if (CurrentMillis - PeriodeJourPreviousMillis >= val_PeriodeJourInterval) {
       PeriodeJourPreviousMillis = CurrentMillis;
       NbPeriodeJour = NbPeriodeJour + 1;
     }
 
     // Compte Nombre Période Heure de Soleil
     if (digitalRead(InCurrentSol) == HIGH) {
-      if (CurrentMillis - PeriodeHeureSoleilPreviousMillis >= PeriodeHeureSoleilInterval) {
+      if (CurrentMillis - PeriodeHeureSoleilPreviousMillis >= val_PeriodeHeureSoleilInterval) {
         PeriodeHeureSoleilPreviousMillis = CurrentMillis;
         QuotaHeureSoleil = QuotaHeureSoleil + 1;
       }
@@ -977,8 +1048,8 @@ void WorkMode_Auto() {
 
     // Nous sommes arrivé à la fin de la période de comptage
     // Nous vérifions si le quota du nombre d'heure est atteint
-    if (NbPeriodeJour >= NbPeriodeJourModeAuto) {
-      if (QuotaHeureSoleil >= QuotaMiniHeureSoleil) {
+    if (NbPeriodeJour >= val_NbPeriodeJourModeAuto) {
+      if (QuotaHeureSoleil >= val_QuotaMiniHeureSoleil) {
         // Le quota est respecté, nous restons dans le même mode
         // ON redémarre compteur
         QuotaHeureSoleil = 0;
@@ -1016,14 +1087,14 @@ void WorkMode_AutoR() {
   }
 
   // Le test pour revenir vers le Mode SolCAV est fait à chaque fois !
-  if (CurrentMillis - PeriodeJourPreviousMillis >= PeriodeJourInterval) {
+  if (CurrentMillis - PeriodeJourPreviousMillis >= val_PeriodeJourInterval) {
     PeriodeJourPreviousMillis = CurrentMillis;
     NbPeriodeJour = NbPeriodeJour + 1;
   }
 
   // Compte Nombre Période Heure de Soleil
   if (digitalRead(InCurrentSol) == HIGH) {
-    if (CurrentMillis - PeriodeHeureSoleilPreviousMillis >= PeriodeHeureSoleilInterval) {
+    if (CurrentMillis - PeriodeHeureSoleilPreviousMillis >= val_PeriodeHeureSoleilInterval) {
       PeriodeHeureSoleilPreviousMillis = CurrentMillis;
       QuotaHeureSoleil = QuotaHeureSoleil + 1;
     }
@@ -1036,8 +1107,8 @@ void WorkMode_AutoR() {
 
   // Nous sommes arrivé à la fin de la période de comptage
   // Nous vérifions si le quota du nombre d'heure est atteint
-  if (NbPeriodeJour >= NbPeriodeJourModeAuto) {
-    if (QuotaHeureSoleil >= QuotaMiniHeureSoleil) {
+  if (NbPeriodeJour >= val_NbPeriodeJourModeAuto) {
+    if (QuotaHeureSoleil >= val_QuotaMiniHeureSoleil) {
       // Le quota est respecté, nous restons dans le même mode
       // ON redémarre compteur
       QuotaHeureSoleil = 0;
