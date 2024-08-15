@@ -20,6 +20,7 @@
       * Signal pour piloter contacteur Chauffe Eau 1 - CA1
       * Signal pour piloter contacteur Chauffe Eau 2 - CA2
       * Signal pour piloter contacteur Chargement Voiture - CV
+      * En prévision Signal pour piloter contacteur Chargement - X
     Modes :
 		  Dans le principe, un changement de mode, va re-initialiser le compteur d'armement
 		
@@ -28,7 +29,7 @@
       -------------------------------------------
       * Mode basculement Valeur des Tempos
       -------------------------------------------
-      Un appui simultanément sur les 3 premiers boutons permet de modifier 
+      Un appui simultanément sur les 3 boutons  JNR / SolCA / SolCAVR permet de modifier 
 	    la valeurs des tempos, entre  
 	    * Mode Réel
 		  * Mode simulation
@@ -74,7 +75,7 @@
       --------------------------------------------
 		    Même chose que Mode SolCAVR
 		    Si après NbPeriodeJour, il a y eu moins de Soleil que "QuotaMiniHeureSoleil"
-		    Alors, Nous nous replions vers le Mode JNR et on y reste
+		    Alors, nous nous replions vers le Mode JNR et on y reste
 
       -------------------------------------------
       * Mode AutoR : Mode SolCAVR avec repliement vers JNR et retour vers SolCAVR possible 
@@ -100,8 +101,6 @@
 			Quelque soit le mode, 
 				--> Nous émulons le mode JNR (sans courant de nuit) sur une durée 
 					définie : ArmVDuration
-				
-
 
  ================================================================== */
 // ===== PROTOTYPES ======
@@ -172,10 +171,13 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 // ----------------------------------------------------
 // Type de Carte : Simulation TinkerPad ou Carte Réelle
 //    Choix entre : BoardTinkercad / BoardHardware
+//    --> La différence tient en l'activation des sorties relais qui se font en
+//    * Signal haut pour la Simulation BoardTinkercad
+//    * Signal bas pour la carte BoardHardware
 #define BoardType BoardTinkercad
 
 // MODE Debug  avec Sortie Série
-#define Debug_Mode_Serie true
+#define Debug_Mode_Serie false
 
 // ----------------------------------------------------
 //                   FIN - CONFIGURATIONS
