@@ -174,7 +174,7 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 //    --> La différence tient en l'activation des sorties relais qui se font en
 //    * Signal haut pour la Simulation BoardTinkercad
 //    * Signal bas pour la carte BoardHardware
-#define BoardType BoardTinkercad
+#define BoardType BoardHardware
 
 // MODE Debug  avec Sortie Série
 #define Debug_Mode_Serie false
@@ -198,7 +198,7 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 //   Valeur multiplicateur en (s)
 //   En référence aux 8 heures de courant de nuit
 //   --> 15 minutes entre basculement (60 * 15)
-#define SwitchContactInterval_Real 1000ul * (60 * 15)
+#define SwitchContactInterval_Real 1000ul * (60 * 30)
 #define SwitchContactInterval_Simul 1000ul * (3)
 
 // Définit la durée d'interval représentant 1 Jour
@@ -463,6 +463,8 @@ void loop() {
   // --------------------------------------------------
   // Cas particulier ou 3 boutons appuiés en même temps
   // --------------------------------------------------
+
+  //
   if (ButModeDynChangeOneShot && !ButModeJNisUp && !ButModeSolCAVisUp && !ButModeSolAutoisUp) {
     delay(10);
     ButModeJNisUp = digitalRead(ButModeJN);
