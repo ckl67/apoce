@@ -1,0 +1,201 @@
+( { EESchema Netlist Version 1.1 created  2024-06-02T16:18:18+0200 }
+ ( /02f0ada2-1374-4010-a0db-fa540c20500c $noname  R14 470
+  (    1 Net-(D10-K) )
+  (    2 GND )
+ )
+ ( /aff35ceb-536a-4013-925b-c79d69b5f610 $noname  D10 LED-V-Vert
+  (    1 Net-(D10-K) )
+  (    2 /OutV )
+ )
+ ( /f15e86ca-052e-42d2-bd3e-9d0388191c03 $noname  D7 LED-CA1-Vert
+  (    1 Net-(D7-K) )
+  (    2 /OutCA1 )
+ )
+ ( /b2c7baa7-2c76-4ba0-877e-41a1313817df $noname  R13 470
+  (    1 Net-(D9-K) )
+  (    2 GND )
+ )
+ ( /017c498b-d37d-43b7-b0e0-880a33a2ce74 $noname  D9 LED-X-Vert
+  (    1 Net-(D9-K) )
+  (    2 /OutX )
+ )
+ ( /89eac017-b216-42cd-a183-996ad0764e9c $noname  R12 470
+  (    1 Net-(D8-K) )
+  (    2 GND )
+ )
+ ( /e85329cf-e434-4f51-a391-8a38e97f70b3 $noname  D8 LED-CA2-Vert
+  (    1 Net-(D8-K) )
+  (    2 /OutCA2 )
+ )
+ ( /6be9d500-17e2-433b-8a32-7e633b760925 $noname  D1 LED_-_Verte
+  (    1 Net-(D1-K) )
+  (    2 Net-(A1-D2) )
+ )
+ ( /46a57f93-6d91-4c2c-a86d-e0f23755cd05 $noname  J5 Conn_01x03_Pin
+  (    1 unconnected-(J5-Pin_1-Pad1) )
+  (    2 unconnected-(J5-Pin_2-Pad2) )
+  (    3 unconnected-(J5-Pin_3-Pad3) )
+ )
+ ( /f2475070-2b44-4b50-bbf1-eb97d43f5c37 $noname  R5 470
+  (    1 Net-(D1-K) )
+  (    2 GND )
+ )
+ ( /92ee183b-4568-453c-b423-1cd4523bf67f $noname  J4 Test-Sol
+  (    1 unconnected-(J4-Pin_1-Pad1) )
+  (    2 unconnected-(J4-Pin_2-Pad2) )
+  (    3 unconnected-(J4-Pin_3-Pad3) )
+ )
+ ( /0abaf0b3-4bf2-4f92-b743-0aecfcf0a4be $noname  R3 10K
+  (    1 Net-(A1-D2) )
+  (    2 GND )
+ )
+ ( /a4042016-2411-43ef-9d24-0c19d38057af Module:Arduino_Nano  A1 Arduino_Nano_v3.x
+  (    1 unconnected-(A1-D1{slash}TX-Pad1) )
+  (    2 unconnected-(A1-D0{slash}RX-Pad2) )
+  (    3 unconnected-(A1-~{RESET}-Pad3) )
+  (    4 GND )
+  (    5 Net-(A1-D2) )
+  (    6 Net-(A1-D3) )
+  (    7 Net-(A1-D4) )
+  (    8 Net-(A1-D5) )
+  (    9 Net-(A1-D6) )
+  (   10 Net-(A1-D7) )
+  (   11 /OutCA1 )
+  (   12 /OutCA2 )
+  (   13 /OutV )
+  (   14 Net-(A1-D11) )
+  (   15 Net-(A1-D12) )
+  (   16 Net-(A1-D13) )
+  (   17 unconnected-(A1-3V3-Pad17) )
+  (   18 unconnected-(A1-AREF-Pad18) )
+  (   19 /OutV )
+  (   20 /OutX )
+  (   21 unconnected-(A1-A2-Pad21) )
+  (   22 unconnected-(A1-A3-Pad22) )
+  (   23 unconnected-(A1-A4-Pad23) )
+  (   24 unconnected-(A1-A5-Pad24) )
+  (   25 unconnected-(A1-A6-Pad25) )
+  (   26 unconnected-(A1-A7-Pad26) )
+  (   27 +5V )
+  (   28 unconnected-(A1-~{RESET}-Pad28) )
+  (   29 GND )
+  (   30 unconnected-(A1-VIN-Pad30) )
+ )
+ ( /0a62a072-0354-445e-8170-5e740509df91 $noname  SW2 ButModeSolCAV
+  (    1 GND )
+  (    2 Net-(A1-D5) )
+ )
+ ( /87f5b7c0-2814-4973-aea8-1b16818ac229 $noname  SW1 ButModeJN
+  (    1 GND )
+  (    2 Net-(A1-D4) )
+ )
+ ( /ec48edbb-a994-4484-9723-62fe2eff9389 $noname  SW3 ButModeSolAuto
+  (    1 GND )
+  (    2 Net-(A1-D6) )
+ )
+ ( /5155ac9c-bce8-4f4a-9274-8aceebc8bc08 $noname  SW4 ButArmV
+  (    1 GND )
+  (    2 Net-(A1-D7) )
+ )
+ ( /56e42399-ffe8-4c80-8023-6530cee4a75d $noname  R4 10K
+  (    1 Net-(A1-D3) )
+  (    2 GND )
+ )
+ ( /5437aa52-07d1-4bb7-a6e3-b5d490ff3fdf $noname  D2 LED_-_Verte
+  (    1 Net-(D2-K) )
+  (    2 Net-(A1-D3) )
+ )
+ ( /ec41f68b-5f7f-4d52-a1d1-f27cf8abe4d0 $noname  R6 470
+  (    1 Net-(D2-K) )
+  (    2 GND )
+ )
+ ( /35045bd2-eb0b-48cc-a84d-d71170ca62b7 $noname  J3 Relais
+  (    1 GND )
+  (    2 /OutCA1 )
+  (    3 /OutCA2 )
+  (    4 /OutV )
+  (    5 /OutX )
+  (    6 +5V )
+ )
+ ( /7e9b7bbe-b14d-4a07-8bd1-95825f597f97 Package_DIP:DIP-6_W7.62mm  U1 4N35
+  (    1 Net-(R1-Pad2) )
+  (    2 GND2 )
+  (    3 unconnected-(U1-NC-Pad3) )
+  (    4 Net-(A1-D2) )
+  (    5 +5V )
+  (    6 unconnected-(U1-Pad6) )
+ )
+ ( /586c54e6-9007-4a84-8e3b-9399b75c6626 $noname  J1 In-Sol
+  (    1 Net-(J1-Pin_1) )
+  (    2 Net-(J1-Pin_2) )
+ )
+ ( /0eebf532-9e2d-40b1-8650-77178e326665 Package_DIP:DIP-6_W7.62mm  U2 4N35
+  (    1 Net-(R2-Pad2) )
+  (    2 GND1 )
+  (    3 unconnected-(U2-NC-Pad3) )
+  (    4 Net-(A1-D3) )
+  (    5 +5V )
+  (    6 unconnected-(U2-Pad6) )
+ )
+ ( /7289c21b-3a21-4755-842f-97a17daa6b4f $noname  R2 470
+  (    1 Net-(PS2-+Vo) )
+  (    2 Net-(R2-Pad2) )
+ )
+ ( /e5f10003-b2d3-411d-af15-e5aaec5e56ac Converter_ACDC:Converter_ACDC_MeanWell_IRM-05-xx_THT  PS2 IRM-05-5
+  (    1 Net-(J2-Pin_2) )
+  (    2 Net-(J2-Pin_1) )
+  (    3 GND1 )
+  (    4 Net-(PS2-+Vo) )
+ )
+ ( /7dc0c02a-330b-43ba-b0fa-bb7ad063cbe3 $noname  J2 In-J/N
+  (    1 Net-(J2-Pin_1) )
+  (    2 Net-(J2-Pin_2) )
+ )
+ ( /ddf97d97-5ab0-4186-91d5-a21d79619731 Converter_ACDC:Converter_ACDC_MeanWell_IRM-05-xx_THT  PS1 IRM-05-5
+  (    1 Net-(J1-Pin_2) )
+  (    2 Net-(J1-Pin_1) )
+  (    3 GND2 )
+  (    4 Net-(PS1-+Vo) )
+ )
+ ( /ca382256-edca-45ca-bcbc-a2d657d87d2b $noname  R1 470
+  (    1 Net-(PS1-+Vo) )
+  (    2 Net-(R1-Pad2) )
+ )
+ ( /334a1e55-c645-4dcb-971d-25552ad9fd6d $noname  R8 470
+  (    1 Net-(A1-D12) )
+  (    2 Net-(D4-A) )
+ )
+ ( /f6ad9397-737d-4289-b1fe-be5435a63d6d $noname  R7 470
+  (    1 Net-(A1-D13) )
+  (    2 Net-(D3-A) )
+ )
+ ( /faded75d-65bf-4205-a481-05d90a98be94 $noname  D3 LedModeJN-Bleu
+  (    1 GND )
+  (    2 Net-(D3-A) )
+ )
+ ( /e69c51eb-42c4-4d2d-ad42-4823c5e73675 $noname  D4 LedModeSolCAV-Orange
+  (    1 GND )
+  (    2 Net-(D4-A) )
+ )
+ ( /d0b6be3f-d46a-43d2-a448-e71d8dec06b7 $noname  R11 470
+  (    1 Net-(D7-K) )
+  (    2 GND )
+ )
+ ( /2162f1d7-5746-4fb1-b165-4151f9dd94f2 $noname  R9 470
+  (    1 Net-(A1-D11) )
+  (    2 Net-(D5-A) )
+ )
+ ( /f1abe84c-8736-4518-96d4-d33f95f6f2b0 $noname  D5 LedModeSolAuto-Rouge
+  (    1 GND )
+  (    2 Net-(D5-A) )
+ )
+ ( /efd2fd45-04ac-438f-9c5d-31f0b30bbc9b $noname  D6 LedArmV-Blanc
+  (    1 GND )
+  (    2 Net-(D6-A) )
+ )
+ ( /9b03a5fe-6a3d-4563-815c-d1bac5e95ce4 $noname  R10 470
+  (    1 /OutV )
+  (    2 Net-(D6-A) )
+ )
+)
+*
