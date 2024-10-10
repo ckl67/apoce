@@ -36,39 +36,67 @@
 	    * Mode Réel
 		  * Mode simulation
       
-      -------------------------------------------
+	  -------------------------------------------
       * Mode JN : Jour-Nuit --> Led : Bleue Allumée
       --------------------------------------------
+	 Si ModeArm = 0
         Si signal J/N = 1
           Basculement entre pilotage "CA1 + CA2" puis "CV"
         Si signal J/N = 0
           Pas de pilotage
-
+	 Si ModeArm = 1x
+        Si signal J/N = 1
+          Basculement entre pilotage "CA1 + CA2 + CV" puis "CV"
+        Si signal J/N = 0
+          "CV"
+	 Si ModeArm = 2x
+          Basculement entre pilotage "CA1 + CA2" puis "CA2 + CV"
+		  
       -------------------------------------------
       * Mode JNR : Jour-Nuit Rotatif --> Led : Bleue Clignotante
       --------------------------------------------
+  	 Si ModeArm = 0
         Si signal J/N = 1
           Basculement entre pilotage "CA1" puis "CA2" puis "CV"
         Si signal J/N = 0
           Pas de pilotage
+	 Si ModeArm = 1x
+        Si signal J/N = 1
+          Basculement entre pilotage "CA1+CV" puis "CA2+CV" puis "CV"
+        Si signal J/N = 0
+          "CV"
+	 Si ModeArm = 2x
+          Basculement entre pilotage "CA1" puis "CA2" puis "CV"
 
       -------------------------------------------
       * Mode SolCA : Soleil Chauffe Eau --> Led Orange Allumée
       --------------------------------------------
+ 	 Si ModeArm = 0
         Si signal SOL = 1
           Basculement entre pilotage "CA1" puis "CA2"
         Si signal J/N = 1
           Activation CV 
-        Si signal J/N = 0 ou SOL = 0
+		    Si signal J/N = 0 ou SOL = 0
           Pas de pilotage
-
+ 	 Si ModeArm = 1x
+        Si signal SOL = 1
+          Basculement entre pilotage "CA1+CV" puis "CA2+CV"
+ 	 Si ModeArm = 2x
+          Basculement entre pilotage "CA1 + CV" puis "CA2 + CV"
+	
       -------------------------------------------
       * Mode SolCAVR : Soleil Rotatif --> Led Orange Clignotante
       --------------------------------------------
+ 	    Si ModeArm = 0
         Si signal SOL = 1
           Basculement entre pilotage "CA1" puis "CA2" puis "V"
         Si SOL = 0
           Pas de pilotage
+ 	    Si ModeArm = 1x
+        Si signal SOL = 1
+          Basculement entre pilotage "CA1+CV" puis "CA2+CV" puis "CV"
+ 	    Si ModeArm = 2x
+          Basculement entre pilotage "CA1" puis "CA2" puis "CV"	
 
       -------------------------------------------
       * Mode Auto : Mode SolCAVR avec repliement vers JNR 
@@ -107,14 +135,16 @@
  ================================================================== */
 // ===== PROTOTYPES ======
 
-void ActiveRelay(int);           // Active le relay
-void DeActiveRelay(int);         // Desactive le Relay
-void WorkMode_JN();              // Mode Nuit en même temps
-void WorkMode_JNR(int);          // Mode Nuit en Rotatif
-void WorkMode_SolCA();           // Mode Soleil : Uniquement Chauffe Eau rotatif
-void WorkMode_SolCAVR(int);      // Mode Soleil en Rotatif
-void WorkMode_Auto();            // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR
-void WorkMode_AutoR();           // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR, puis revenir en mode Auto
+void ActiveRelay(int);    // Active le relay
+void DeActiveRelay(int);  // Desactive le Relay
+
+void WorkMode_JN();          // Mode Nuit en même temps
+void WorkMode_JNR(int);      // Mode Nuit en Rotatif
+void WorkMode_SolCA();       // Mode Soleil : Uniquement Chauffe Eau rotatif
+void WorkMode_SolCAVR(int);  // Mode Soleil en Rotatif
+void WorkMode_Auto();        // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR
+void WorkMode_AutoR();       // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR, puis revenir en mode Auto
+
 void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur des tempos
 
 // ===== DEFINE ======
@@ -145,10 +175,10 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 #define ButModeJN 4       // Bouton Mode Jour Nuit
 #define ButModeSolCAV 5   // Bouton Mode Soleil Chauffe Eau et Voiture
 #define ButModeSolAuto 6  // Bouton Mode Soleil Auto
-#define ButArmV 7         // Bouton Armement Chargement Voiture en Forcé sur 12H
+#define ButArm 7          // Bouton Armement
 
 // Broches Sorties
-#define LedArmV A0         // Led Armement pour forcer la charge de la voiture (Une Entrée/Sortie Analogique peut être utilisée en Digitale)
+#define LedArm A0          // Led Armement (Une Entrée/Sortie Analogique peut être utilisée en Digitale)
 #define LedModeSolAuto 11  // Led pour choix : Soleil - mode Auto
 #define LedModeSolCAV 12   // Led pour choix : Soleil Chauffage + Voiture
 #define LedModeJN 13       // Led pour choix : Mode Jour/Nuit
@@ -157,7 +187,7 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 #define OutCA2 9  // Sortie pour piloter contacteur Chauffe Eau 2
 #define OutV 10   // Sortie pour piloter contacteur Voiture
 
-// Modes
+// Modes de fonctionnement
 #define ModeJN 0              // Mode Jour-Nuit
 #define ModeJNR 1             // Mode Jour-Nuit Rotatif
 #define ModeSolCA 2           // Mode Soleil Chauffe Eau -- Nuit : Voiture
@@ -165,6 +195,11 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 #define ModeSolAuto 4         // Mode Auto
 #define ModeSolAutoR 5        // Mode Auto avec retour en arrière vers mode Auto
 #define ModeDynChangeTempo 6  // Mode Changement tempo dynamique
+
+// Modes d'Armement
+#define ModeNoARM 0      // Pas de mode Armement
+#define ModeARMSimple 1  // Mode Armement Simple
+#define ModeARMDouble 2  // Mode Aremement Double
 
 // ----------------------------------------------------
 // ----------------------------------------------------
@@ -192,14 +227,14 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 
 // Durée chargement de voiture en Mode forcé
 //   Valeur multiplicateur en (s)
-//   --> 6 heures = (3600 * 6)
-#define ArmVDuration_Real 1000ul * (3600 * 6)
+//   --> 10 heures = (3600 * 10)
+#define ArmVDuration_Real 1000ul * (3600 * 10)
 #define ArmVDuration_Simul 1000ul * (20)
 
 // Interval de basculement entre les contacteurs
 //   Valeur multiplicateur en (s)
 //   En référence aux 8 heures de courant de nuit
-//   --> 15 minutes entre basculement (60 * 15)
+//   --> 30 minutes entre basculement (60 * 30)
 #define SwitchContactInterval_Real 1000ul * (60 * 30)
 #define SwitchContactInterval_Simul 1000ul * (3)
 
@@ -233,8 +268,15 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 boolean ButModeJNwasUp;
 boolean ButModeSolCAVwasUp;
 boolean ButModeSolAutowasUp;
-boolean ButArmVwasUp;
+boolean ButArmwasUp;
+
+// Variable Bouton : Vérifie si un bouton est pressé 2 fois
 boolean ButSecondPush;
+
+// Variable Bouton : Vérifie si un bouton Arm est pressé 2 fois
+boolean ButArmSecondPush;
+
+// Variable Bouton : Appui simultané des 3 boutons
 boolean ButModeDynChangeOneShot;
 
 // Temps
@@ -242,7 +284,7 @@ unsigned long CurrentMillis;
 
 // Tempos
 boolean NormalTempoInterval;
-unsigned long val_ArmVDuration;
+unsigned long val_ArmDuration;
 unsigned long val_SwitchContactInterval;
 unsigned long val_PeriodeJourInterval;
 unsigned long val_PeriodeHeureSoleilInterval;
@@ -251,9 +293,11 @@ unsigned long val_QuotaMiniHeureSoleil;
 
 // Variable "temps" pour contôler clignottement de toutes les LEDs
 unsigned long LedPreviousMillis;
+unsigned long LedArmPreviousMillis;
 
 // Variable clignottement Led
 int LedInterval = LedIntervalSlow;
+int LedArmInterval = LedIntervalSlow;
 
 // Variable temps pour contrôler les contacteurs
 unsigned long SwitchContactPreviousMillis;
@@ -268,23 +312,16 @@ int SwitchContactSelection;
 // Etat Clignottement des LEDs
 int LedBlinkingState;  // LOW ou HIGH, Valeur de Clignottement de la Led
 
-// Switch pour changement clignottement Led en mode double Armement
-boolean SwitchLedIntervalFast;
-
 // Etat LED pour armement de la voiture
-int LedArmVState;  // LOW ou HIGH, Valeur de Clignottement de la Led
+int LedArmBlinkingState;  // LOW ou HIGH, Valeur de Clignottement de la Led
 
 // Etat de L'armement.
 boolean ArmTriggerStatus;
 boolean ArmDoubleTriggerStatus;
 
-// Etats possibles
-// ArmTriggerStatus = false - ArmDoubleTriggerStatus = NA --> C'est le mode qui prime
-// ArmTriggerStatus = true - ArmDoubleTriggerStatus = false --> Mode + Force Voiture
-// ArmTriggerStatus = true - ArmDoubleTriggerStatus = true --> JNR avec émulation de présence de courant de nuit
-
 // Variable Mode de fonctionnement
 int Mode;
+int ModeArm;
 int ModeSaved;
 
 // Compte le Nombre de Période Jour
@@ -312,12 +349,12 @@ void setup() {
   pinMode(ButModeJN, INPUT_PULLUP);
   pinMode(ButModeSolAuto, INPUT_PULLUP);
   pinMode(ButModeSolCAV, INPUT_PULLUP);
-  pinMode(ButArmV, INPUT_PULLUP);
+  pinMode(ButArm, INPUT_PULLUP);
 
   pinMode(LedModeSolCAV, OUTPUT);
   pinMode(LedModeSolAuto, OUTPUT);
   pinMode(LedModeJN, OUTPUT);
-  pinMode(LedArmV, OUTPUT);
+  pinMode(LedArm, OUTPUT);
 
   pinMode(OutCA1, OUTPUT);
   pinMode(OutCA2, OUTPUT);
@@ -326,7 +363,7 @@ void setup() {
   digitalWrite(LedModeJN, HIGH);
   digitalWrite(LedModeSolCAV, LOW);
   digitalWrite(LedModeSolAuto, LOW);
-  digitalWrite(LedArmV, LOW);
+  digitalWrite(LedArm, LOW);
   DeActiveRelay(OutCA1);
   DeActiveRelay(OutCA2);
   DeActiveRelay(OutV);
@@ -335,13 +372,23 @@ void setup() {
   CurrentMillis = 0;
 
   // Tempos
-  NormalTempoInterval = true;
-  val_ArmVDuration = ArmVDuration_Real;
-  val_SwitchContactInterval = SwitchContactInterval_Real;
-  val_PeriodeJourInterval = PeriodeJourInterval_Real;
-  val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Real;
-  val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Real;
-  val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Real;
+  if (BoardType == BoardTinkercad) {
+    val_ArmDuration = ArmVDuration_Simul;
+    val_SwitchContactInterval = SwitchContactInterval_Simul;
+    val_PeriodeJourInterval = PeriodeJourInterval_Simul;
+    val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Simul;
+    val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Simul;
+    val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Simul;
+    NormalTempoInterval = false;
+  } else {
+    val_ArmDuration = ArmVDuration_Real;
+    val_SwitchContactInterval = SwitchContactInterval_Real;
+    val_PeriodeJourInterval = PeriodeJourInterval_Real;
+    val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Real;
+    val_NbPeriodeJourModeAuto = NbPeriodeJourModeAuto_Real;
+    val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Real;
+    NormalTempoInterval = true;
+  }
 
   // En relation avec le mode Auto
   DepassementQuota = 0;
@@ -352,30 +399,29 @@ void setup() {
 
   // Variable pour Armement
   LedPreviousMillis = CurrentMillis;
-  LedArmVState = LOW;
-
-  // Switch pour changement clignottement Led en mode double Armement
-  SwitchLedIntervalFast = false;
+  LedArmPreviousMillis = CurrentMillis;
+  LedArmBlinkingState = LOW;
 
   // Varaible pour led clignottement en fonctionnement Forcé
   LedBlinkingState = LOW;
 
+  // Tempo d'armement
   ArmVPreviousMillis = CurrentMillis;
-
-  // Mode Armement
-  ArmTriggerStatus = false;
-  ArmDoubleTriggerStatus = false;
 
   // Variable Mode de fonctionnement
   Mode = ModeJNR;
+  ModeArm = ModeNoARM;
   ModeSaved = ModeJNR;
 
   // Variable Button
   ButModeJNwasUp = true;
   ButModeSolAutowasUp = true;
   ButModeSolCAVwasUp = true;
-  ButArmVwasUp = true;
-  ButSecondPush = true;
+  ButArmwasUp = true;
+
+  ButSecondPush = false;
+  ButArmSecondPush = false;
+
   ButModeDynChangeOneShot = true;
 
   // Variable Mode Auto
@@ -390,7 +436,7 @@ void loop() {
 
   CurrentMillis = millis();
 
-  // ----------- Compteur de Clignotement Led Armement ---------------------
+  // ----------- Compteur de Clignotement Led  ---------------------
   if (CurrentMillis - LedPreviousMillis >= LedInterval) {
     LedPreviousMillis = CurrentMillis;
 
@@ -400,39 +446,33 @@ void loop() {
     } else {
       LedBlinkingState = LOW;
     }
-
-    // if the LED is off turn it on and vice-versa:
-    if (LedArmVState == LOW) {
-      LedArmVState = HIGH;
-    } else {
-      LedArmVState = LOW;
-    }
-
-    // Durée clignottement
-    if (ArmDoubleTriggerStatus)
-      if (SwitchLedIntervalFast) {
-        LedInterval = LedIntervalFast;
-        SwitchLedIntervalFast = false;
-      } else {
-        LedInterval = LedIntervalSlow;
-        SwitchLedIntervalFast = true;
-      }
-    else
-      LedInterval = LedIntervalSlow;
+    // Durée clignottement (Aucun intérêt de clignoter plus vite dans le cas d'un deuxième appui !!)
+    LedInterval = LedIntervalSlow;
   }
 
-  // ----- Compteur Armement : Forcement Charge Voiture  ---------------------
-  if (CurrentMillis - ArmVPreviousMillis >= val_ArmVDuration) {
+  // ----------- Compteur de Clignotement Led Armement---------------------
+  if (CurrentMillis - LedArmPreviousMillis >= LedArmInterval) {
+    LedArmPreviousMillis = CurrentMillis;
+
+    // if the LED is off turn it on and vice-versa:
+    if (LedArmBlinkingState == LOW) {
+      LedArmBlinkingState = HIGH;
+    } else {
+      LedArmBlinkingState = LOW;
+    }
+    // Durée clignottement
+    if (ModeArm == ModeARMDouble)
+      LedArmInterval = LedIntervalFast;
+    else
+      LedArmInterval = LedIntervalSlow;
+  }
+
+  // ----- Compteur Armement : Fin du compteur  ---------------------
+  if (CurrentMillis - ArmVPreviousMillis >= val_ArmDuration) {
     ArmVPreviousMillis = CurrentMillis;
 
-    // A la fin de la Tempo,
-    // Dans le cas où nous étions en "Double Armement"
-    // Nous revenons vers le mode Sauvegardé
-    if (ArmDoubleTriggerStatus == true)
-      Mode = ModeSaved;
-
-    ArmTriggerStatus = false;
-    ArmDoubleTriggerStatus = false;
+    ModeArm = ModeNoARM;
+    ButArmSecondPush = false;
   }
 
   // ----- Compteur Switch entre CA1, CA2 et Voiture ---------------------
@@ -460,7 +500,7 @@ void loop() {
   boolean ButModeJNisUp = digitalRead(ButModeJN);
   boolean ButModeSolCAVisUp = digitalRead(ButModeSolCAV);
   boolean ButModeSolAutoisUp = digitalRead(ButModeSolAuto);
-  boolean ButArmVisUp = digitalRead(ButArmV);
+  boolean ButArmisUp = digitalRead(ButArm);
 
   // --------------------------------------------------
   // Cas particulier ou 3 boutons appuiés en même temps
@@ -500,19 +540,21 @@ void loop() {
 
     // Init Variables
     // On remet l'armement à zéro
+    ModeArm = ModeNoARM;
+
     ArmTriggerStatus = false;
     ArmDoubleTriggerStatus = false;
     DepassementQuota = 0;
     SwitchContactSelection = 0;
     SwitchContactPreviousMillis = CurrentMillis;
-    LedPreviousMillis = 0;
-    ArmVPreviousMillis = 0;
+    LedPreviousMillis = CurrentMillis;
+    ArmVPreviousMillis = CurrentMillis;
     QuotaHeureSoleil = 0;
     PeriodeHeureSoleilPreviousMillis = CurrentMillis;
     NbPeriodeJour = 0;
     PeriodeJourPreviousMillis = CurrentMillis;
     ButModeDynChangeOneShot = true;
-
+    ButArmSecondPush = false;
 
     DeActiveRelay(OutCA1);
     DeActiveRelay(OutCA2);
@@ -543,17 +585,20 @@ void loop() {
 
       // Init Variables
       // On remet l'armement à zéro
+      ModeArm = ModeNoARM;
+
       ArmTriggerStatus = false;
       ArmDoubleTriggerStatus = false;
       DepassementQuota = 0;
       SwitchContactSelection = 0;
       SwitchContactPreviousMillis = CurrentMillis;
-      LedPreviousMillis = 0;
-      ArmVPreviousMillis = 0;
+      LedPreviousMillis = CurrentMillis;
+      ArmVPreviousMillis = CurrentMillis;
       QuotaHeureSoleil = 0;
       PeriodeHeureSoleilPreviousMillis = CurrentMillis;
       NbPeriodeJour = 0;
       PeriodeJourPreviousMillis = CurrentMillis;
+      ButModeDynChangeOneShot = true;
 
       DeActiveRelay(OutCA1);
       DeActiveRelay(OutCA2);
@@ -584,18 +629,21 @@ void loop() {
 
       // Init Variables
       // On remet l'armement à zéro
+      ModeArm = ModeNoARM;
+
       ArmTriggerStatus = false;
       ArmDoubleTriggerStatus = false;
       DepassementQuota = 0;
       SwitchContactSelection = 0;
       SwitchContactPreviousMillis = CurrentMillis;
-      LedPreviousMillis = 0;
-      ArmVPreviousMillis = 0;
+      LedPreviousMillis = CurrentMillis;
+      ArmVPreviousMillis = CurrentMillis;
       QuotaHeureSoleil = 0;
       PeriodeHeureSoleilPreviousMillis = CurrentMillis;
       NbPeriodeJour = 0;
       PeriodeJourPreviousMillis = CurrentMillis;
-
+      ButModeDynChangeOneShot = true;
+      ButArmSecondPush = false;
 
       DeActiveRelay(OutCA1);
       DeActiveRelay(OutCA2);
@@ -606,42 +654,29 @@ void loop() {
   ButModeSolAutowasUp = ButModeSolAutoisUp;  // = true bouton relaché  --> mémorise l'état
 
   // --------------------------
-  // si bouton ArmState pressé
+  // si Bouton ARM pressé
   // --------------------------
-  if (ButArmVwasUp && !ButArmVisUp) {
+  if (ButArmwasUp && !ButArmisUp) {
     delay(10);
-    ButArmVisUp = digitalRead(ButArmV);
-    if (!ButArmVisUp) {
+    ButArmisUp = digitalRead(ButArm);
 
-      if ((ArmDoubleTriggerStatus))
-        ButSecondPush = false;
+    if (!ButArmisUp) {
 
-      if (ButSecondPush == false) {
-        // Double appui sur Bouton Armement
-        ButSecondPush = true;
-
-        // Indique que nous sommes en Double Armement
-        ArmDoubleTriggerStatus = true;
-
-        // Nous sauvegardons le Mode
-        ModeSaved = Mode;
-
-        // Nous forcons le mode JNR
-        Mode = ModeJNR;
-
+      if (ButArmSecondPush == false) {
+        ModeArm = ModeARMSimple;
+        ButArmSecondPush = true;
       } else {
-        // Mode Armemement Normal
-        ButSecondPush = false;
+        ModeArm = ModeARMDouble;
+        ButArmSecondPush = false;
       }
-
-      // ModeArmement Normal (Dans tous les cas)
-      ArmTriggerStatus = true;
-
-      // Important ici on réinitialise le compteur d'armement
-      ArmVPreviousMillis = CurrentMillis;
     }
+    // Init Variables
+    // On remet l'armement à zéro
+    ArmVPreviousMillis = CurrentMillis;
   }
-  ButArmVwasUp = ButArmVisUp;  // = true bouton relaché  --> mémorise l'état
+  ButArmwasUp = ButArmisUp;  // true = bouton relaché  --> mémorise l'état
+
+
 
   // -----------------------------------------------------------
   //  -------------------------- Automate  ---------------------
@@ -685,8 +720,8 @@ void loop() {
     Serial.print(Mode);
     Serial.write("   ");
 
-    Serial.print("ArmDoubleTriggerStatus=");
-    Serial.print(ArmDoubleTriggerStatus);
+    Serial.print("Ma=");
+    Serial.print(ModeArm);
     Serial.write("   ");
 
     Serial.print("H.Sol/(H=5s)<4> =");
@@ -746,7 +781,7 @@ void WorkMode_DynChangeTempo() {
   }
 
   if (NormalTempoInterval) {
-    val_ArmVDuration = ArmVDuration_Simul;
+    val_ArmDuration = ArmVDuration_Simul;
     val_SwitchContactInterval = SwitchContactInterval_Simul;
     val_PeriodeJourInterval = PeriodeJourInterval_Simul;
     val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Simul;
@@ -754,7 +789,7 @@ void WorkMode_DynChangeTempo() {
     val_QuotaMiniHeureSoleil = QuotaMiniHeureSoleil_Simul;
     NormalTempoInterval = false;
   } else {
-    val_ArmVDuration = ArmVDuration_Real;
+    val_ArmDuration = ArmVDuration_Real;
     val_SwitchContactInterval = SwitchContactInterval_Real;
     val_PeriodeJourInterval = PeriodeJourInterval_Real;
     val_PeriodeHeureSoleilInterval = PeriodeHeureSoleilInterval_Real;
@@ -769,48 +804,103 @@ void WorkMode_DynChangeTempo() {
 
 // -------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------
-
+/* 
+      -------------------------------------------
+      * Mode JN : Jour-Nuit --> Led : Bleue Allumée
+      --------------------------------------------
+	 Si ModeArm = 0
+        Si signal J/N = 1
+          Basculement entre pilotage "CA1 + CA2" puis "CV"
+        Si signal J/N = 0
+          Pas de pilotage
+	 Si ModeArm = 1x
+        Si signal J/N = 1
+          Basculement entre pilotage "CA1 + CA2 + CV" puis "CV"
+        Si signal J/N = 0
+          "CV"
+	 Si ModeArm = 2x
+          Basculement entre pilotage "CA1 + CA2" puis "CA2 + CV"
+*/
 void WorkMode_JN() {
 
   digitalWrite(LedModeJN, HIGH);
   digitalWrite(LedModeSolCAV, LOW);
   digitalWrite(LedModeSolAuto, LOW);
 
-  if (ArmTriggerStatus)
-    digitalWrite(LedArmV, LedArmVState);
+  if (ModeArm != ModeNoARM)
+    digitalWrite(LedArm, LedArmBlinkingState);
   else
-    digitalWrite(LedArmV, LOW);
+    digitalWrite(LedArm, LOW);
 
-  if ((digitalRead(InCurrentJN) == HIGH)) {
-    if (SwitchContactSelection == 0) {
-      ActiveRelay(OutCA1);
-      ActiveRelay(OutCA2);
-      // A la place de DeActiveRelay(OutV);
-      if (ArmTriggerStatus) {
-        ActiveRelay(OutV);
-      } else {
+  // -------------------------------------
+  if (ModeArm == ModeNoARM) {
+    if ((digitalRead(InCurrentJN) == HIGH)) {
+      if (SwitchContactSelection == 0) {
+        ActiveRelay(OutCA1);
+        ActiveRelay(OutCA2);
         DeActiveRelay(OutV);
       }
+      if (SwitchContactSelection == 1) {
+        DeActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+    } else {
+      DeActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+      DeActiveRelay(OutV);
     }
-    if (SwitchContactSelection == 1) {
+  } else if (ModeArm == ModeARMSimple) {
+    if ((digitalRead(InCurrentJN) == HIGH)) {
+      if (SwitchContactSelection == 0) {
+        ActiveRelay(OutCA1);
+        ActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 1) {
+        DeActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+    } else {
       DeActiveRelay(OutCA1);
       DeActiveRelay(OutCA2);
       ActiveRelay(OutV);
     }
   } else {
-    DeActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-    // A la place de DeActiveRelay(OutV);
-    if (ArmTriggerStatus) {
-      ActiveRelay(OutV);
-    } else {
+    //ModeArm == ModeARMSDouble
+    if (SwitchContactSelection == 0) {
+      ActiveRelay(OutCA1);
+      ActiveRelay(OutCA2);
       DeActiveRelay(OutV);
+    }
+    if (SwitchContactSelection == 1) {
+      DeActiveRelay(OutCA1);
+      ActiveRelay(OutCA2);
+      ActiveRelay(OutV);
     }
   }
 }
 // -------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------
+/*
+      -------------------------------------------
+      * Mode JNR : Jour-Nuit Rotatif --> Led : Bleue Clignotante
+      --------------------------------------------
+  	 Si ModeArm = 0
+        Si signal J/N = 1
+          Basculement entre pilotage "CA1" puis "CA2" puis "CV"
+        Si signal J/N = 0
+          Pas de pilotage
+	 Si ModeArm = 1x
+        Si signal J/N = 1
+          Basculement entre pilotage "CA1+CV" puis "CA2+CV" puis "CV"
+        Si signal J/N = 0
+          "CV"
+	 Si ModeArm = 2x
+          Basculement entre pilotage "CA1" puis "CA2" puis "CV"
 
+*/
 void WorkMode_JNR(int ValLedModeSolAuto) {
 
   digitalWrite(LedModeJN, LedBlinkingState);
@@ -818,43 +908,14 @@ void WorkMode_JNR(int ValLedModeSolAuto) {
   digitalWrite(LedModeSolAuto, LOW);
 
   // Clignottement ou Non Led Armement
-  if (ArmTriggerStatus)
-    digitalWrite(LedArmV, LedArmVState);
+  if (ModeArm != ModeNoARM)
+    digitalWrite(LedArm, LedArmBlinkingState);
   else
-    digitalWrite(LedArmV, LOW);
+    digitalWrite(LedArm, LOW);
 
-  // Contrôle sorties mode normal sans double Armement
-  if ((digitalRead(InCurrentJN) == HIGH) && (ArmDoubleTriggerStatus == false)) {
-
-    if (SwitchContactSelection == 0) {
-      ActiveRelay(OutCA1);
-      DeActiveRelay(OutCA2);
-      // A la place de DeActiveRelay(OutV);
-      if (ArmTriggerStatus) {
-        ActiveRelay(OutV);
-      } else {
-        DeActiveRelay(OutV);
-      }
-    }
-    if (SwitchContactSelection == 1) {
-      DeActiveRelay(OutCA1);
-      ActiveRelay(OutCA2);
-      // A la place de DeActiveRelay(OutV);
-      if (ArmTriggerStatus) {
-        ActiveRelay(OutV);
-      } else {
-        DeActiveRelay(OutV);
-      }
-    }
-    if (SwitchContactSelection == 2) {
-      DeActiveRelay(OutCA1);
-      DeActiveRelay(OutCA2);
-      ActiveRelay(OutV);
-    }
-
-  } else {
-    // Double Armement
-    if (ArmDoubleTriggerStatus) {
+  // -------------------------------------
+  if (ModeArm == ModeNoARM) {
+    if ((digitalRead(InCurrentJN) == HIGH)) {
       if (SwitchContactSelection == 0) {
         ActiveRelay(OutCA1);
         DeActiveRelay(OutCA2);
@@ -873,107 +934,224 @@ void WorkMode_JNR(int ValLedModeSolAuto) {
     } else {
       DeActiveRelay(OutCA1);
       DeActiveRelay(OutCA2);
-      // A la place de DeActiveRelay(OutV);
-      if (ArmTriggerStatus) {
-        ActiveRelay(OutV);
-      } else {
-        DeActiveRelay(OutV);
-      }
-    }
-  }
-}
-
-// -------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------
-
-void WorkMode_SolCA() {
-
-  digitalWrite(LedModeSolCAV, HIGH);
-  digitalWrite(LedModeSolAuto, LOW);
-  digitalWrite(LedModeJN, LOW);
-  digitalWrite(LedArmV, LOW);
-
-  if (ArmTriggerStatus)
-    digitalWrite(LedArmV, LedArmVState);
-  else
-    digitalWrite(LedArmV, LOW);
-
-  if (digitalRead(InCurrentSol) == HIGH) {
-    if (SwitchContactSelection == 0) {
-      ActiveRelay(OutCA1);
-      DeActiveRelay(OutCA2);
-    }
-    if (SwitchContactSelection == 1) {
-      DeActiveRelay(OutCA1);
-      ActiveRelay(OutCA2);
-    }
-  } else {
-    DeActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-  }
-
-  if (digitalRead(InCurrentJN) == HIGH) {
-    ActiveRelay(OutV);
-  } else {
-    // A la place de DeActiveRelay(OutV);
-    if (ArmTriggerStatus) {
-      ActiveRelay(OutV);
-    } else {
       DeActiveRelay(OutV);
     }
-  }
-}
-
-// -------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------
-
-void WorkMode_SolCAVR(int ValLedModeSolAuto) {
-
-  digitalWrite(LedModeJN, LOW);
-  digitalWrite(LedModeSolCAV, LedBlinkingState);
-  digitalWrite(LedModeSolAuto, ValLedModeSolAuto);
-  digitalWrite(LedArmV, LOW);
-
-  if (ArmTriggerStatus)
-    digitalWrite(LedArmV, LedArmVState);
-  else
-    digitalWrite(LedArmV, LOW);
-
-  if (digitalRead(InCurrentSol) == HIGH) {
-
+  } else if (ModeArm == ModeARMSimple) {
+    if ((digitalRead(InCurrentJN) == HIGH)) {
+      if (SwitchContactSelection == 0) {
+        ActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 1) {
+        DeActiveRelay(OutCA1);
+        ActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 2) {
+        DeActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+    } else {
+      DeActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+      ActiveRelay(OutV);
+    }
+  } else {
+    //ModeArm == ModeARMSDouble
     if (SwitchContactSelection == 0) {
       ActiveRelay(OutCA1);
       DeActiveRelay(OutCA2);
-      // A la place de DeActiveRelay(OutV);
-      if (ArmTriggerStatus) {
-        ActiveRelay(OutV);
-      } else {
-        DeActiveRelay(OutV);
-      }
+      DeActiveRelay(OutV);
     }
     if (SwitchContactSelection == 1) {
       DeActiveRelay(OutCA1);
       ActiveRelay(OutCA2);
-      // A la place de DeActiveRelay(OutV);
-      if (ArmTriggerStatus) {
-        ActiveRelay(OutV);
-      } else {
-        DeActiveRelay(OutV);
-      }
+      DeActiveRelay(OutV);
     }
     if (SwitchContactSelection == 2) {
       DeActiveRelay(OutCA1);
       DeActiveRelay(OutCA2);
       ActiveRelay(OutV);
     }
-  } else {
-    DeActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-    // A la place de DeActiveRelay(OutV);
-    if (ArmTriggerStatus) {
+  }
+}
+
+// -------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------
+/*    
+     -------------------------------------------
+      * Mode SolCA : Soleil Chauffe Eau --> Led Orange Allumée
+      --------------------------------------------
+ 	 Si ModeArm = 0
+        Si signal SOL = 1
+          Basculement entre pilotage "CA1" puis "CA2"
+        Si signal J/N = 1
+          Activation CV 
+		Si signal J/N = 0 ou SOL = 0
+          Pas de pilotage
+ 	 Si ModeArm = 1x
+        Si signal SOL = 1
+          Basculement entre pilotage "CA1+CV" puis "CA2+CV"
+ 	 Si ModeArm = 2x
+          Basculement entre pilotage "CA1 + CV" puis "CA2 + CV"
+*/
+
+void WorkMode_SolCA() {
+
+  digitalWrite(LedModeSolCAV, HIGH);
+  digitalWrite(LedModeSolAuto, LOW);
+  digitalWrite(LedModeJN, LOW);
+  digitalWrite(LedArm, LOW);
+
+  // Clignottement ou Non Led Armement
+  if (ModeArm != ModeNoARM)
+    digitalWrite(LedArm, LedArmBlinkingState);
+  else
+    digitalWrite(LedArm, LOW);
+  // --------------------------------------------------
+  if (ModeArm == ModeNoARM) {
+    if ((digitalRead(InCurrentSol) == HIGH)) {
+      if (SwitchContactSelection == 0) {
+        ActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+      }
+      if (SwitchContactSelection == 1) {
+        DeActiveRelay(OutCA1);
+        ActiveRelay(OutCA2);
+      }
+    } else {
+      DeActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+    }
+    if (digitalRead(InCurrentJN) == HIGH) {
       ActiveRelay(OutV);
     } else {
       DeActiveRelay(OutV);
+    }
+  } else if (ModeArm == ModeARMSimple) {
+    if ((digitalRead(InCurrentSol) == HIGH)) {
+      if (SwitchContactSelection == 0) {
+        ActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+      }
+      if (SwitchContactSelection == 1) {
+        DeActiveRelay(OutCA1);
+        ActiveRelay(OutCA2);
+      }
+    } else {
+      DeActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+    }
+    ActiveRelay(OutV);
+  } else {
+    //ModeArm == ModeARMSDouble
+    if (SwitchContactSelection == 0) {
+      ActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+      ActiveRelay(OutV);
+    }
+    if (SwitchContactSelection == 1) {
+      DeActiveRelay(OutCA1);
+      ActiveRelay(OutCA2);
+      ActiveRelay(OutV);
+    }
+  }
+}
+
+// -------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------
+/*
+      -------------------------------------------
+      * Mode SolCAVR : Soleil Rotatif --> Led Orange Clignotante
+      --------------------------------------------
+ 	    Si ModeArm = 0
+        Si signal SOL = 1
+          Basculement entre pilotage "CA1" puis "CA2" puis "V"
+        Si SOL = 0
+          Pas de pilotage
+ 	    Si ModeArm = 1x
+        Si signal SOL = 1
+          Basculement entre pilotage "CA1+CV" puis "CA2+CV" puis "CV"
+ 	    Si ModeArm = 2x
+          Basculement entre pilotage "CA1" puis "CA2" puis "CV"
+*/
+
+void WorkMode_SolCAVR(int ValLedModeSolAuto) {
+
+  digitalWrite(LedModeJN, LOW);
+  digitalWrite(LedModeSolCAV, LedBlinkingState);
+  digitalWrite(LedModeSolAuto, ValLedModeSolAuto);
+  digitalWrite(LedArm, LOW);
+
+  // Clignottement ou Non Led Armement
+  if (ModeArm != ModeNoARM)
+    digitalWrite(LedArm, LedArmBlinkingState);
+  else
+    digitalWrite(LedArm, LOW);
+
+  // -------------------------------------
+  if (ModeArm == ModeNoARM) {
+    if ((digitalRead(InCurrentSol) == HIGH)) {
+      if (SwitchContactSelection == 0) {
+        ActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        DeActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 1) {
+        DeActiveRelay(OutCA1);
+        ActiveRelay(OutCA2);
+        DeActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 2) {
+        DeActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+    } else {
+      DeActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+      DeActiveRelay(OutV);
+    }
+  } else if (ModeArm == ModeARMSimple) {
+    if ((digitalRead(InCurrentSol) == HIGH)) {
+      if (SwitchContactSelection == 0) {
+        ActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 1) {
+        DeActiveRelay(OutCA1);
+        ActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+      if (SwitchContactSelection == 2) {
+        DeActiveRelay(OutCA1);
+        DeActiveRelay(OutCA2);
+        ActiveRelay(OutV);
+      }
+    } else {
+      DeActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+      ActiveRelay(OutV);
+    }
+  } else {
+    //ModeArm == ModeARMSDouble
+    if (SwitchContactSelection == 0) {
+      ActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+      DeActiveRelay(OutV);
+    }
+    if (SwitchContactSelection == 1) {
+      DeActiveRelay(OutCA1);
+      ActiveRelay(OutCA2);
+      DeActiveRelay(OutV);
+    }
+    if (SwitchContactSelection == 2) {
+      DeActiveRelay(OutCA1);
+      DeActiveRelay(OutCA2);
+      ActiveRelay(OutV);
     }
   }
 }
