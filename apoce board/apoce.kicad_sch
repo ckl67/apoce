@@ -4930,7 +4930,7 @@
 				)
 			)
 		)
-		(property "Value" "ButModeSol"
+		(property "Value" "ButModeSolCAV"
 			(at 54.61 132.08 0)
 			(effects
 				(font
@@ -7802,7 +7802,7 @@
 				)
 			)
 		)
-		(property "Value" "LedModeSol-Orange"
+		(property "Value" "LedModeSolCAV-Orange"
 			(at 195.8975 129.54 0)
 			(effects
 				(font
@@ -8006,7 +8006,7 @@
 				)
 			)
 		)
-		(property "Value" "ButModeAuto"
+		(property "Value" "ButModeSolAuto"
 			(at 54.61 153.67 0)
 			(effects
 				(font
@@ -8277,7 +8277,7 @@
 				)
 			)
 		)
-		(property "Value" "LedModeAuto-Rouge"
+		(property "Value" "LedModeSolAuto-Rouge"
 			(at 195.8975 144.78 0)
 			(effects
 				(font
