@@ -33,40 +33,7 @@
 	  Dans le principe, un changement de mode, va re-initialiser le compteur d'armement
 		
 	Les Modes disponibles :
-
-      -------------------------------------------
-      * Mode basculement Valeur des Tempos
-      -------------------------------------------
-      Un appui simultanément sur les 3 boutons  JNR / SOL / Auto permet de modifier 
-	    la valeurs des tempos, entre  
-	    * Mode Réel
-		* Mode simulation
-      
-	  -------------------------------------------
-      * Mode JN : Jour-Nuit --> Led : Bleue Allumée
-      --------------------------------------------
-	 Si ModeArm = 0
-        Si signal J/N = 1
-          Basculement entre pilotage "CA1" puis "CA2" 
-	 Si ModeArm = 1 
-        Si signal J/N = 1
-          Basculement entre pilotage "CA1" puis "CA2" puis "CV"  
-		
-     Si signal J/N = 0
-        Pas de pilotage
-		  
-      -------------------------------------------
-      * Mode SOL : Soleil --> Led Orange Allumée
-      --------------------------------------------
-    Si ModeArm = 0
-        Si signal SOL = 1
-          Basculement entre pilotage "CA1" puis "CA2"
-	Si ModeArm = 1 
-        Si signal SOL = 1
-          Basculement entre pilotage "CA1" puis "CA2" puis "CV"
-    Si SOL = 0
-          Pas de pilotage
-
+    
       -------------------------------------------
       * Mode Auto : Jour-Nuit + Soleil --> Led Rouge Allumée
       --------------------------------------------
@@ -106,8 +73,6 @@ void DeActiveRelay(int);  // Desactive le Relais
 void WorkMode_JN();    // Mode Nuit en même temps
 void WorkMode_SOL();   // Mode Soleil : Uniquement Chauffe Eau rotatif
 void WorkMode_Auto();  // Mode Auto, qui après n heures sur m jours va passer k jours en mode JNR
-
-void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur des tempos
 
 // ===== DEFINE ======
 
@@ -154,7 +119,10 @@ void WorkMode_DynChangeTempo();  // Mode de changement dynamique de la valeur de
 #define ModeJN 0              // Mode Jour-Nuit
 #define ModeSOL 2             // Mode Soleil
 #define ModeAUTO 4            // Mode Auto
-#define ModeDynChangeTempo 6  // Mode Changement tempo dynamique
+
+#define ModeForceCA1 6       // Mode CA1
+#define ModeForceCA2 7       // Mode CA2
+#define ModeForceV 8         // Mode Voiture
 
 // Modes d'Armement
 #define ModeNoARM 0      // Pas de mode Armement
@@ -211,11 +179,11 @@ boolean ButModeSOLwasUp;
 boolean ButModeAUTOwasUp;
 boolean ButArmwasUp;
 
+// Variable Bouton : Vérifie si un bouton est pressé 2 fois
+boolean ButSecondPush;
+
 // Variable Bouton : Vérifie si un bouton Arm est pressé 2 fois
 boolean ButArmSecondPush;
-
-// Variable Bouton : Appui simultané des 3 boutons
-boolean ButModeDynChangeOneShot;
 
 // Temps
 unsigned long CurrentMillis;
@@ -329,9 +297,9 @@ void setup() {
   ButModeSOLwasUp = true;
   ButArmwasUp = true;
 
+  ButSecondPush = false;
   ButArmSecondPush = false;
 
-  ButModeDynChangeOneShot = true;
 }
 
 // ======================== LOOP ====================================
@@ -408,22 +376,6 @@ void loop() {
   boolean ButModeAUTOisUp = digitalRead(ButModeAUTO);
   boolean ButArmisUp = digitalRead(ButArm);
 
-  // --------------------------------------------------
-  // Cas particulier ou 3 boutons appuiés en même temps
-  // --------------------------------------------------
-
-  //
-  if (ButModeDynChangeOneShot && !ButModeJNisUp && !ButModeSOLisUp && !ButModeAUTOisUp) {
-    delay(10);
-    ButModeJNisUp = digitalRead(ButModeJN);
-    ButModeSOLisUp = digitalRead(ButModeSOL);
-    ButModeAUTOisUp = digitalRead(ButModeAUTO);
-
-    if (!ButModeJNisUp && !ButModeSOLisUp && !ButModeAUTOisUp) {
-      Mode = ModeDynChangeTempo;
-    }
-  }
-
   // --------------------------
   // si bouton Mode JN pressé
   // --------------------------
@@ -432,22 +384,30 @@ void loop() {
     ButModeJNisUp = digitalRead(ButModeJN);
     if (!ButModeJNisUp) {
 
-      if (Mode != ModeJN)
+      if ((Mode != ModeForceCA1) && (Mode != ModeJN))
+        ButSecondPush = false;
+
+      if (ButSecondPush == false) {
         Mode = ModeJN;
-    }
+        ButSecondPush = true;
+      } else {
+        Mode = ModeForceCA1;
+        ButSecondPush = false;
+      }
 
     // Init Variables
     // On remet l'armement à zéro
     ModeArm = ModeNoARM;
-
     ArmTriggerStatus = false;
     ArmDoubleTriggerStatus = false;
+    ButArmSecondPush = false;
+    ArmVPreviousMillis = CurrentMillis;
+	
+	// On recommence sur CA1
     SwitchContactSelection = 0;
     SwitchContactPreviousMillis = CurrentMillis;
+
     LedPreviousMillis = CurrentMillis;
-    ArmVPreviousMillis = CurrentMillis;
-    ButModeDynChangeOneShot = true;
-    ButArmSecondPush = false;
 
     DeActiveRelay(OutCA1);
     DeActiveRelay(OutCA2);
@@ -466,9 +426,17 @@ void loop() {
 
     if (!ButModeSOLisUp) {
 
-      if (Mode != ModeSOL)
+      if ((Mode != ModeForceCA2) && (Mode != ModeSOL))
+        ButSecondPush = false;
+
+      if (ButSecondPush == false) {
         Mode = ModeSOL;
-    }
+        ButSecondPush = true;
+      } else {
+        Mode = ModeForceCA2;
+        ButSecondPush = false;
+      }
+
 
     // Init Variables
     // On remet l'armement à zéro
@@ -480,7 +448,6 @@ void loop() {
     SwitchContactPreviousMillis = CurrentMillis;
     LedPreviousMillis = CurrentMillis;
     ArmVPreviousMillis = CurrentMillis;
-    ButModeDynChangeOneShot = true;
 
     DeActiveRelay(OutCA1);
     DeActiveRelay(OutCA2);
@@ -497,8 +464,16 @@ void loop() {
     ButModeAUTOisUp = digitalRead(ButModeAUTO);
     if (!ButModeAUTOisUp) {
 
-      if (Mode != ModeAUTO)
+      if ((Mode != ModeForceV) && (Mode != ModeAUTO))
+        ButSecondPush = false;
+
+      if (ButSecondPush == false) {
         Mode = ModeAUTO;
+        ButSecondPush = true;
+      } else {
+        Mode = ModeForceV;
+        ButSecondPush = false;
+      }
 
 
       // Init Variables
@@ -511,7 +486,6 @@ void loop() {
       SwitchContactPreviousMillis = CurrentMillis;
       LedPreviousMillis = CurrentMillis;
       ArmVPreviousMillis = CurrentMillis;
-      ButModeDynChangeOneShot = true;
       ButArmSecondPush = false;
 
       DeActiveRelay(OutCA1);
@@ -561,10 +535,6 @@ void loop() {
       WorkMode_Auto();
       break;
 
-    case ModeDynChangeTempo:
-      WorkMode_DynChangeTempo();
-      break;
-
     default:
       WorkMode_Auto();
       break;
@@ -610,36 +580,6 @@ void DeActiveRelay(int pin) {
     digitalWrite(pin, LOW);
   }
 }
-
-// -------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------
-void WorkMode_DynChangeTempo() {
-  int i;
-
-  for (i = 0; i < 5; i++) {
-    digitalWrite(LedModeJN, HIGH);
-    digitalWrite(LedModeSOL, HIGH);
-    digitalWrite(LedModeAUTO, HIGH);
-    delay(500);
-    digitalWrite(LedModeJN, LOW);
-    digitalWrite(LedModeSOL, LOW);
-    digitalWrite(LedModeAUTO, LOW);
-    delay(500);
-  }
-
-  if (NormalTempoInterval) {
-    val_ArmDuration = ArmDuration_Simul;
-    val_SwitchContactInterval = SwitchContactInterval_Simul;
-    NormalTempoInterval = false;
-  } else {
-    val_ArmDuration = ArmDuration_Real;
-    val_SwitchContactInterval = SwitchContactInterval_Real;
-    NormalTempoInterval = true;
-  }
-  ButModeDynChangeOneShot = false;
-  Mode = ModeJN;
-}
-
 
 // -------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------
