@@ -1,4 +1,3 @@
-
 /* =================================================================
 	Pilote Arduino pour optimiser la gestion de consommation électrique
     Christian Klugesherz
@@ -24,16 +23,48 @@
       * Signal pour piloter contacteur Chauffe Eau 1 - CA1
       * Signal pour piloter contacteur Chauffe Eau 2 - CA2
       * Signal pour piloter contacteur Chargement Voiture - CV
-      * En prévision Signal pour piloter contacteur Chargement - X
 	Bouton :
 	  * BoutonJN
 	  * BoutonSOL
 	  * BoutonAUTO
     Modes :
 	  Dans le principe, un changement de mode, va re-initialiser le compteur d'armement
+
+Les Modes disponibles :
+
+      -------------------------------------------
+      * Mode basculement Valeur des Tempos
+      -------------------------------------------
+      Un appui simultanément sur les 3 boutons  JNR / SOL / Auto permet de modifier 
+	    la valeurs des tempos, entre  
+	    * Mode Réel
+		* Mode simulation
+      
+	  -------------------------------------------
+      * Mode JN : Jour-Nuit --> Led : Bleue Allumée
+      --------------------------------------------
+	 Si ModeArm = 0
+        Si signal J/N = 1
+            Basculement entre pilotage "CA1" puis "CA2" 
+	 Si ModeArm = 1 
+        Si signal J/N = 1
+            Basculement entre pilotage "CA1" puis "CA2" puis "CV"  
 		
-	Les Modes disponibles :
-    
+    Si signal J/N = 0
+          Pas de pilotage
+		  
+      -------------------------------------------
+      * Mode SOL : Soleil --> Led Orange Allumée
+      --------------------------------------------
+    Si ModeArm = 0
+        Si signal SOL = 1
+          Basculement entre pilotage "CA1" puis "CA2"
+	  Si ModeArm = 1 
+        Si signal SOL = 1
+          Basculement entre pilotage "CA1" puis "CA2" puis "CV"
+    Si SOL = 0
+          Pas de pilotage
+
       -------------------------------------------
       * Mode Auto : Jour-Nuit + Soleil --> Led Rouge Allumée
       --------------------------------------------
@@ -63,6 +94,15 @@
 				Sans courant de nuit, ni Soleil  : Basculement entre pilotage "CA1" puis "CA2" puis "V" sur une durée 
 					définie : ArmDuration
             ArmDuration_Real = 12 heures
+
+      -------------------------------------------
+      * Bouton Forcage CA1 . CA2 . V 
+      -------------------------------------------
+      Un premier appui sur le bouton va 
+        * Positionner le forcage, 
+      un deuxième va 
+        * Positionner le mode 
+
 
  ================================================================== */
 // ===== PROTOTYPES ======
@@ -120,9 +160,20 @@ void WorkMode_Auto();  // Mode Auto, qui après n heures sur m jours va passer k
 #define ModeSOL 2   // Mode Soleil
 #define ModeAUTO 4  // Mode Auto
 
-#define ModeForceCA1 6  // Mode CA1
-#define ModeForceCA2 7  // Mode CA2
-#define ModeForceV 8    // Mode Voiture
+// Position Bit POur le mode Forcer
+// 		CA1	CA2	V	FR
+// 		0	0	0	0
+// 		0	0	1	1
+// 		0	1	0	2
+// 		0	1 	1	3
+// 		1	0	0	4
+// 		1	0	1	5
+// 		1	1 	0	6
+// 		1	1	1	7
+
+#define BitForceCA1 0x3  // Force Mode CA1
+#define BitForceCA2 0x2  // Force Mode CA2
+#define BitForceV 0x1    // Force Mode Voiture
 
 // Modes d'Armement
 #define ModeNoARM 0      // Pas de mode Armement
@@ -225,6 +276,7 @@ boolean ArmDoubleTriggerStatus;
 int Mode;
 int ModeArm;
 int ModeSaved;
+int ValForceMode;
 
 // ======================================= SETUP ===============================
 void setup() {
@@ -290,6 +342,7 @@ void setup() {
   Mode = ModeAUTO;
   ModeArm = ModeNoARM;
   ModeSaved = ModeAUTO;
+  ValForceMode = 0;
 
   // Variable Button
   ButModeJNwasUp = true;
@@ -383,15 +436,20 @@ void loop() {
     ButModeJNisUp = digitalRead(ButModeJN);
     if (!ButModeJNisUp) {
 
-      if ((Mode != ModeForceCA1) && (Mode != ModeJN))
+      Mode = ModeJN;
+
+      if (Mode != ModeJN) {
         ButSecondPush = false;
+      }
 
       if (ButSecondPush == false) {
-        Mode = ModeForceCA1;
         ButSecondPush = true;
+        // Force
+        ValForceMode = ValForceMode & (0X77 & BitForceCA1);
       } else {
-        Mode = ModeJN;
         ButSecondPush = false;
+        // Reset
+        ValForceMode = ValForceMode & (0X00 & BitForceCA1);
       }
     }
 
@@ -426,15 +484,21 @@ void loop() {
 
     if (!ButModeSOLisUp) {
 
-      if ((Mode != ModeForceCA2) && (Mode != ModeSOL))
+      Mode = ModeSOL;
+
+      if (Mode != ModeSOL) {
         ButSecondPush = false;
+      }
 
       if (ButSecondPush == false) {
-        Mode = ModeForceCA2;
         ButSecondPush = true;
+        // Force
+        ValForceMode = ValForceMode & (0X77 & BitForceCA2);
+
       } else {
-        Mode = ModeSOL;
         ButSecondPush = false;
+        // Reset
+        ValForceMode = ValForceMode & (0X00 & BitForceCA2);
       }
     }
 
@@ -464,15 +528,20 @@ void loop() {
     ButModeAUTOisUp = digitalRead(ButModeAUTO);
     if (!ButModeAUTOisUp) {
 
-      if ((Mode != ModeForceV) && (Mode != ModeAUTO))
+      Mode = ModeAUTO;
+
+      if (Mode != ModeAUTO) {
         ButSecondPush = false;
+      }
 
       if (ButSecondPush == false) {
-        Mode = ModeForceV;
         ButSecondPush = true;
+        // Force
+        ValForceMode = ValForceMode & (0X77 & BitForceV);
       } else {
-        Mode = ModeAUTO;
         ButSecondPush = false;
+        // Reset
+        ValForceMode = ValForceMode & (0X00 & BitForceV);
       }
     }
 
