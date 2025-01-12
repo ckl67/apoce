@@ -116,13 +116,13 @@ void WorkMode_Auto();  // Mode Auto, qui après n heures sur m jours va passer k
 #define OutV 10   // Sortie pour piloter contacteur Voiture
 
 // Modes de fonctionnement
-#define ModeJN 0              // Mode Jour-Nuit
-#define ModeSOL 2             // Mode Soleil
-#define ModeAUTO 4            // Mode Auto
+#define ModeJN 0    // Mode Jour-Nuit
+#define ModeSOL 2   // Mode Soleil
+#define ModeAUTO 4  // Mode Auto
 
-#define ModeForceCA1 6       // Mode CA1
-#define ModeForceCA2 7       // Mode CA2
-#define ModeForceV 8         // Mode Voiture
+#define ModeForceCA1 6  // Mode CA1
+#define ModeForceCA2 7  // Mode CA2
+#define ModeForceV 8    // Mode Voiture
 
 // Modes d'Armement
 #define ModeNoARM 0      // Pas de mode Armement
@@ -299,15 +299,14 @@ void setup() {
 
   ButSecondPush = false;
   ButArmSecondPush = false;
-
 }
 
 // ======================== LOOP ====================================
 void loop() {
 
-  // Il n'y a pas de problème à utiliser millis() pendant plusieurs années, 
+  // Il n'y a pas de problème à utiliser millis() pendant plusieurs années,
   // si on utilise toujours la formule qui compare la différence de 2 temps à un seuil.
-    CurrentMillis = millis();
+  CurrentMillis = millis();
 
   // ----------- Compteur de Clignotement Led  ---------------------
   if (CurrentMillis - LedPreviousMillis >= LedInterval) {
@@ -348,7 +347,7 @@ void loop() {
     ButArmSecondPush = false;
   }
 
-// ----- Compteur Switch entre CA1, CA2 et Voiture ---------------------
+  // ----- Compteur Switch entre CA1, CA2 et Voiture ---------------------
   if (CurrentMillis - SwitchContactPreviousMillis >= val_SwitchContactInterval) {
     SwitchContactPreviousMillis = CurrentMillis;
     SwitchContactSelection = SwitchContactSelection + 1;
@@ -388,12 +387,13 @@ void loop() {
         ButSecondPush = false;
 
       if (ButSecondPush == false) {
-        Mode = ModeJN;
+        Mode = ModeForceCA1;
         ButSecondPush = true;
       } else {
-        Mode = ModeForceCA1;
+        Mode = ModeJN;
         ButSecondPush = false;
       }
+    }
 
     // Init Variables
     // On remet l'armement à zéro
@@ -402,8 +402,8 @@ void loop() {
     ArmDoubleTriggerStatus = false;
     ButArmSecondPush = false;
     ArmVPreviousMillis = CurrentMillis;
-	
-	// On recommence sur CA1
+
+    // On recommence sur CA1
     SwitchContactSelection = 0;
     SwitchContactPreviousMillis = CurrentMillis;
 
@@ -430,13 +430,13 @@ void loop() {
         ButSecondPush = false;
 
       if (ButSecondPush == false) {
-        Mode = ModeSOL;
+        Mode = ModeForceCA2;
         ButSecondPush = true;
       } else {
-        Mode = ModeForceCA2;
+        Mode = ModeSOL;
         ButSecondPush = false;
       }
-
+    }
 
     // Init Variables
     // On remet l'armement à zéro
@@ -468,31 +468,30 @@ void loop() {
         ButSecondPush = false;
 
       if (ButSecondPush == false) {
-        Mode = ModeAUTO;
+        Mode = ModeForceV;
         ButSecondPush = true;
       } else {
-        Mode = ModeForceV;
+        Mode = ModeAUTO;
         ButSecondPush = false;
       }
-
-
-      // Init Variables
-      // On remet l'armement à zéro
-      ModeArm = ModeNoARM;
-
-      ArmTriggerStatus = false;
-      ArmDoubleTriggerStatus = false;
-      SwitchContactSelection = 0;
-      SwitchContactPreviousMillis = CurrentMillis;
-      LedPreviousMillis = CurrentMillis;
-      ArmVPreviousMillis = CurrentMillis;
-      ButArmSecondPush = false;
-
-      DeActiveRelay(OutCA1);
-      DeActiveRelay(OutCA2);
-      DeActiveRelay(OutV);
-      delay(10);
     }
+
+    // Init Variables
+    // On remet l'armement à zéro
+    ModeArm = ModeNoARM;
+
+    ArmTriggerStatus = false;
+    ArmDoubleTriggerStatus = false;
+    SwitchContactSelection = 0;
+    SwitchContactPreviousMillis = CurrentMillis;
+    LedPreviousMillis = CurrentMillis;
+    ArmVPreviousMillis = CurrentMillis;
+    ButArmSecondPush = false;
+
+    DeActiveRelay(OutCA1);
+    DeActiveRelay(OutCA2);
+    DeActiveRelay(OutV);
+    delay(10);
   }
   ButModeAUTOwasUp = ButModeAUTOisUp;  // = true bouton relaché  --> mémorise l'état
 
@@ -596,7 +595,7 @@ void WorkMode_JN() {
     digitalWrite(LedArm, LOW);
 
   // -------------------------------------
-  if (ModeArm != ModeARMDouble ) {
+  if (ModeArm != ModeARMDouble) {
     if ((digitalRead(InCurrentJN) == HIGH)) {
       if (SwitchContactSelection == 0) {
         ActiveRelay(OutCA1);
@@ -653,7 +652,7 @@ void WorkMode_SOL() {
     digitalWrite(LedArm, LOW);
 
   // -------------------------------------
-  if (ModeArm != ModeARMDouble ) {
+  if (ModeArm != ModeARMDouble) {
     if ((digitalRead(InCurrentSOL) == HIGH)) {
       if (SwitchContactSelection == 0) {
         ActiveRelay(OutCA1);
@@ -710,9 +709,9 @@ void WorkMode_Auto() {
     digitalWrite(LedArm, LOW);
 
   // -------------------------------------
-  if (ModeArm != ModeARMDouble ) {
-	  
-    if ((digitalRead(InCurrentSOL) == HIGH) || (digitalRead(InCurrentJN) == HIGH) ) {
+  if (ModeArm != ModeARMDouble) {
+
+    if ((digitalRead(InCurrentSOL) == HIGH) || (digitalRead(InCurrentJN) == HIGH)) {
       if (SwitchContactSelection == 0) {
         ActiveRelay(OutCA1);
         DeActiveRelay(OutCA2);
