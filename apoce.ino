@@ -24,22 +24,14 @@
       * Signal pour piloter contacteur Chauffe Eau 2 - CA2
       * Signal pour piloter contacteur Chargement Voiture - CV
 	Bouton :
-	  * BoutonJN
-	  * BoutonSOL
-	  * BoutonAUTO
+	  * BoutonJN --> Permet aussi de forcer CA1
+	  * BoutonSOL--> Permet aussi de forcer CA2
+	  * BoutonAUTO--> Permet aussi de forcer V
     Modes :
 	  Dans le principe, un changement de mode, va re-initialiser le compteur d'armement
 
 Les Modes disponibles :
 
-      -------------------------------------------
-      * Mode basculement Valeur des Tempos
-      -------------------------------------------
-      Un appui simultanément sur les 3 boutons  JNR / SOL / Auto permet de modifier 
-	    la valeurs des tempos, entre  
-	    * Mode Réel
-		* Mode simulation
-      
 	  -------------------------------------------
       * Mode JN : Jour-Nuit --> Led : Bleue Allumée
       --------------------------------------------
@@ -156,24 +148,15 @@ void WorkMode_Auto();  // Mode Auto, qui après n heures sur m jours va passer k
 #define OutV 10   // Sortie pour piloter contacteur Voiture
 
 // Modes de fonctionnement
-#define ModeJN 0    // Mode Jour-Nuit
+#define ModeJN 1    // Mode Jour-Nuit
 #define ModeSOL 2   // Mode Soleil
-#define ModeAUTO 4  // Mode Auto
+#define ModeAUTO 3  // Mode Auto
 
 // Position Bit POur le mode Forcer
-// 		CA1	CA2	V	FR
-// 		0	0	0	0
-// 		0	0	1	1
-// 		0	1	0	2
-// 		0	1 	1	3
-// 		1	0	0	4
-// 		1	0	1	5
-// 		1	1 	0	6
-// 		1	1	1	7
-
-#define BitForceCA1 0x3  // Force Mode CA1
-#define BitForceCA2 0x2  // Force Mode CA2
-#define BitForceV 0x1    // Force Mode Voiture
+// 	CA1	CA2	V ValForceMode
+#define BitForceCA1 2  // Bit Force Mode CA1
+#define BitForceCA2 1  // Bit Force Mode CA2
+#define BitForceV 0    // Bit Force Mode Voiture
 
 // Modes d'Armement
 #define ModeNoARM 0      // Pas de mode Armement
@@ -190,10 +173,10 @@ void WorkMode_Auto();  // Mode Auto, qui après n heures sur m jours va passer k
 //    --> La différence tient en l'activation des sorties relais qui se font en
 //    * Signal haut pour la Simulation BoardTinkercad
 //    * Signal bas pour la carte BoardHardware
-#define BoardType BoardHardware
+#define BoardType BoardTinkercad
 
 // MODE Debug  avec Sortie Série
-#define Debug_Mode_Serie false
+#define Debug_Mode_Serie true
 
 // ----------------------------------------------------
 //                   FIN - CONFIGURATIONS
@@ -217,11 +200,6 @@ void WorkMode_Auto();  // Mode Auto, qui après n heures sur m jours va passer k
 #define SwitchContactInterval_Real 1000ul * (60 * 30)
 #define SwitchContactInterval_Simul 1000ul * (3)
 
-// Définit la durée d'interval représentant 1 Jour
-// Défaut = 1000ul * (60 * 60 * 24) = 86400000ul
-#define PeriodeJourInterval_Real 1000ul * (60 * 60 * 24)
-#define PeriodeJourInterval_Simul 1000ul * (15)
-
 // ======================================= VARIABLES  ===============================
 
 // Variable Buttons
@@ -231,7 +209,9 @@ boolean ButModeAUTOwasUp;
 boolean ButArmwasUp;
 
 // Variable Bouton : Vérifie si un bouton est pressé 2 fois
-boolean ButSecondPush;
+boolean ButSecondPushJN;
+boolean ButSecondPushSOL;
+boolean ButSecondPushAUTO;
 
 // Variable Bouton : Vérifie si un bouton Arm est pressé 2 fois
 boolean ButArmSecondPush;
@@ -246,10 +226,12 @@ unsigned long val_SwitchContactInterval;
 
 // Variable "temps" pour contôler clignottement de toutes les LEDs
 unsigned long LedPreviousMillis;
+unsigned long LedFastPreviousMillis;
 unsigned long LedArmPreviousMillis;
 
 // Variable clignottement Led
 int LedInterval = LedIntervalSlow;
+int LedFastInterval = LedIntervalFast;
 int LedArmInterval = LedIntervalSlow;
 
 // Variable temps pour contrôler les contacteurs
@@ -263,7 +245,8 @@ unsigned long ArmVPreviousMillis;
 int SwitchContactSelection;
 
 // Etat Clignottement des LEDs
-int LedBlinkingState;  // LOW ou HIGH, Valeur de Clignottement de la Led
+int LedBlinkingState;      // LOW ou HIGH, Valeur de Clignottement de la Led
+int LedFastBlinkingState;  // LOW ou HIGH, Valeur de Clignottement de la Led
 
 // Etat LED pour aArmement
 int LedArmBlinkingState;  // LOW ou HIGH, Valeur de Clignottement de la Led
@@ -276,7 +259,7 @@ boolean ArmDoubleTriggerStatus;
 int Mode;
 int ModeArm;
 int ModeSaved;
-int ValForceMode;
+uint8_t ValForceMode;
 
 // ======================================= SETUP ===============================
 void setup() {
@@ -329,11 +312,13 @@ void setup() {
 
   // Variable pour Armement
   LedPreviousMillis = CurrentMillis;
+  LedFastPreviousMillis = CurrentMillis;
   LedArmPreviousMillis = CurrentMillis;
-  LedArmBlinkingState = LOW;
 
   // Variable pour led clignottement en fonctionnement Forcé
   LedBlinkingState = LOW;
+  LedFastBlinkingState = LOW;
+  LedArmBlinkingState = LOW;
 
   // Tempo d'armement
   ArmVPreviousMillis = CurrentMillis;
@@ -350,7 +335,10 @@ void setup() {
   ButModeSOLwasUp = true;
   ButArmwasUp = true;
 
-  ButSecondPush = false;
+  ButSecondPushJN = false;
+  ButSecondPushSOL = false;
+  ButSecondPushAUTO = false;
+
   ButArmSecondPush = false;
 }
 
@@ -362,6 +350,20 @@ void loop() {
   CurrentMillis = millis();
 
   // ----------- Compteur de Clignotement Led  ---------------------
+  if (CurrentMillis - LedFastPreviousMillis >= LedIntervalFast) {
+    LedFastPreviousMillis = CurrentMillis;
+
+    // if the LED is off turn it on
+    if (LedFastBlinkingState == LOW) {
+      LedFastBlinkingState = HIGH;
+    } else {
+      LedFastBlinkingState = LOW;
+    }
+  }
+
+
+
+  // ----------- Compteur de Clignotement Led  ---------------------
   if (CurrentMillis - LedPreviousMillis >= LedInterval) {
     LedPreviousMillis = CurrentMillis;
 
@@ -371,8 +373,6 @@ void loop() {
     } else {
       LedBlinkingState = LOW;
     }
-    // Durée clignottement (Aucun intérêt de clignoter plus vite dans le cas d'un deuxième appui !!)
-    LedInterval = LedIntervalSlow;
   }
 
   // ----------- Compteur de Clignotement Led Armement---------------------
@@ -436,44 +436,38 @@ void loop() {
     ButModeJNisUp = digitalRead(ButModeJN);
     if (!ButModeJNisUp) {
 
-      Mode = ModeJN;
-
-      if (Mode != ModeJN) {
-        ButSecondPush = false;
-      }
-
-      if (ButSecondPush == false) {
-        ButSecondPush = true;
-        // Force
-        ValForceMode = ValForceMode & (0X77 & BitForceCA1);
+      if (ButSecondPushJN == false) {
+        // Active le mode forcé pour une sortie
+        ButSecondPushJN = true;
+        ValForceMode = ValForceMode | (1 << BitForceCA1);
       } else {
-        ButSecondPush = false;
-        // Reset
-        ValForceMode = ValForceMode & (0X00 & BitForceCA1);
+        // On confirme le mode ModeJN
+        Mode = ModeJN;
+        ButSecondPushJN = false;
+        // Désacive le mode forcé pour une sortie
+        //    Crée un masque où seul le bit ciblé est à 1
+        //    ~ : Inverse tous les bits du masque, ce qui donne un masque où tous les bits sont à 1, sauf celui ciblé qui est à 0.
+        // ValForceMode = ValForceMode & ~(1 << BitForceCA1);
+        // Désacive toutes les sorties
+        ValForceMode = 0;
+
+        // On remet l'armement à zéro
+        ModeArm = ModeNoARM;
+        ArmTriggerStatus = false;
+        ArmDoubleTriggerStatus = false;
+        ArmVPreviousMillis = CurrentMillis;
+        ButArmSecondPush = false;
+
+        // Init Variables
+        SwitchContactSelection = 0;
+        SwitchContactPreviousMillis = CurrentMillis;
+        LedPreviousMillis = CurrentMillis;
       }
     }
 
-    // Init Variables
-    // On remet l'armement à zéro
-    ModeArm = ModeNoARM;
-    ArmTriggerStatus = false;
-    ArmDoubleTriggerStatus = false;
-    ButArmSecondPush = false;
-    ArmVPreviousMillis = CurrentMillis;
-
-    // On recommence sur CA1
-    SwitchContactSelection = 0;
-    SwitchContactPreviousMillis = CurrentMillis;
-
-    LedPreviousMillis = CurrentMillis;
-
-    DeActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-    DeActiveRelay(OutV);
     delay(10);
   }
   ButModeJNwasUp = ButModeJNisUp;  // true = bouton relaché  --> mémorise l'état
-
 
   // --------------------------
   // si bouton Mode Soleil pressé
@@ -484,38 +478,36 @@ void loop() {
 
     if (!ButModeSOLisUp) {
 
-      Mode = ModeSOL;
-
-      if (Mode != ModeSOL) {
-        ButSecondPush = false;
-      }
-
-      if (ButSecondPush == false) {
-        ButSecondPush = true;
-        // Force
-        ValForceMode = ValForceMode & (0X77 & BitForceCA2);
-
+      if (ButSecondPushSOL == false) {
+        // Active le mode forcé pour une sortie
+        ButSecondPushSOL = true;
+        ValForceMode = ValForceMode | (1 << BitForceCA2);
       } else {
-        ButSecondPush = false;
-        // Reset
-        ValForceMode = ValForceMode & (0X00 & BitForceCA2);
+        // On confirme le mode ModeSOL
+        Mode = ModeSOL;
+
+        ButSecondPushSOL = false;
+        // Désacive le mode forcé pour une sortie
+        //    Crée un masque où seul le bit ciblé est à 1
+        //    ~ : Inverse tous les bits du masque, ce qui donne un masque où tous les bits sont à 1, sauf celui ciblé qui est à 0.
+        // ValForceMode = ValForceMode & ~(1 << BitForceCA2);
+        // Désacive toutes les sorties
+        ValForceMode = 0;
+
+        // On remet l'armement à zéro
+        ModeArm = ModeNoARM;
+        ArmTriggerStatus = false;
+        ArmDoubleTriggerStatus = false;
+        ArmVPreviousMillis = CurrentMillis;
+        ButArmSecondPush = false;
+
+        // Init Variables
+        SwitchContactSelection = 0;
+        SwitchContactPreviousMillis = CurrentMillis;
+        LedPreviousMillis = CurrentMillis;
       }
     }
 
-    // Init Variables
-    // On remet l'armement à zéro
-    ModeArm = ModeNoARM;
-
-    ArmTriggerStatus = false;
-    ArmDoubleTriggerStatus = false;
-    SwitchContactSelection = 0;
-    SwitchContactPreviousMillis = CurrentMillis;
-    LedPreviousMillis = CurrentMillis;
-    ArmVPreviousMillis = CurrentMillis;
-
-    DeActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-    DeActiveRelay(OutV);
     delay(10);
   }
   ButModeSOLwasUp = ButModeSOLisUp;  // = true bouton relaché  --> mémorise l'état
@@ -528,38 +520,36 @@ void loop() {
     ButModeAUTOisUp = digitalRead(ButModeAUTO);
     if (!ButModeAUTOisUp) {
 
-      Mode = ModeAUTO;
-
-      if (Mode != ModeAUTO) {
-        ButSecondPush = false;
-      }
-
-      if (ButSecondPush == false) {
-        ButSecondPush = true;
-        // Force
-        ValForceMode = ValForceMode & (0X77 & BitForceV);
+      if (ButSecondPushAUTO == false) {
+        // Active le mode forcé pour une sortie
+        ButSecondPushAUTO = true;
+        ValForceMode = ValForceMode | (1 << BitForceV);
       } else {
-        ButSecondPush = false;
-        // Reset
-        ValForceMode = ValForceMode & (0X00 & BitForceV);
+        // Active le mode forcé pour une sortie
+        Mode = ModeAUTO;
+
+        ButSecondPushAUTO = false;
+        // Désacive le mode forcé pour une sortie
+        //    Crée un masque où seul le bit ciblé est à 1
+        //    ~ : Inverse tous les bits du masque, ce qui donne un masque où tous les bits sont à 1, sauf celui ciblé qui est à 0.
+        // ValForceMode = ValForceMode & ~(1 << BitForceV);
+        // Désacive toutes les sorties
+        ValForceMode = 0;
+
+        // On remet l'armement à zéro
+        ModeArm = ModeNoARM;
+        ArmTriggerStatus = false;
+        ArmDoubleTriggerStatus = false;
+        ArmVPreviousMillis = CurrentMillis;
+        ButArmSecondPush = false;
+
+        // Init Variables
+        SwitchContactSelection = 0;
+        SwitchContactPreviousMillis = CurrentMillis;
+        LedPreviousMillis = CurrentMillis;
       }
     }
 
-    // Init Variables
-    // On remet l'armement à zéro
-    ModeArm = ModeNoARM;
-
-    ArmTriggerStatus = false;
-    ArmDoubleTriggerStatus = false;
-    SwitchContactSelection = 0;
-    SwitchContactPreviousMillis = CurrentMillis;
-    LedPreviousMillis = CurrentMillis;
-    ArmVPreviousMillis = CurrentMillis;
-    ButArmSecondPush = false;
-
-    DeActiveRelay(OutCA1);
-    DeActiveRelay(OutCA2);
-    DeActiveRelay(OutV);
     delay(10);
   }
   ButModeAUTOwasUp = ButModeAUTOisUp;  // = true bouton relaché  --> mémorise l'état
@@ -617,12 +607,18 @@ void loop() {
     Serial.print(ModeArm);
     Serial.write("   ");
 
+    Serial.print("VF=");
+    Serial.print(ValForceMode);
+    Serial.write("   ");
+
     Serial.println();
   }
 
   // Délai
   delay(100);
 }
+
+// ========================================= FIN LOOP ====================================
 
 // ===================================================================================================
 // ========================================= PROCEDURES ==============================================
@@ -653,9 +649,23 @@ void DeActiveRelay(int pin) {
 // -------------------------------------------------------------------------------------------
 void WorkMode_JN() {
 
-  digitalWrite(LedModeJN, HIGH);
-  digitalWrite(LedModeSOL, LOW);
-  digitalWrite(LedModeAUTO, LOW);
+  if (((ValForceMode >> BitForceCA1) & 1) == 1) {
+    digitalWrite(LedModeJN, LedBlinkingState);
+  } else {
+    digitalWrite(LedModeJN, HIGH);
+  }
+
+  if (((ValForceMode >> BitForceCA2) & 1) == 1) {
+    digitalWrite(LedModeSOL, LedFastBlinkingState);
+  } else {
+    digitalWrite(LedModeSOL, LOW);
+  }
+
+  if (((ValForceMode >> BitForceV) & 1) == 1) {
+    digitalWrite(LedModeAUTO, LedFastBlinkingState);
+  } else {
+    digitalWrite(LedModeAUTO, LOW);
+  }
 
   // Clignottement ou Non Led Armement
   if (ModeArm != ModeNoARM)
@@ -664,6 +674,8 @@ void WorkMode_JN() {
     digitalWrite(LedArm, LOW);
 
   // -------------------------------------
+  // Normal ou ModeArmSimple
+  // LA gestion de SwitchContactSelection se fait au niveau ModeArm
   if (ModeArm != ModeARMDouble) {
     if ((digitalRead(InCurrentJN) == HIGH)) {
       if (SwitchContactSelection == 0) {
@@ -710,9 +722,23 @@ void WorkMode_JN() {
 // -------------------------------------------------------------------------------------------
 void WorkMode_SOL() {
 
-  digitalWrite(LedModeJN, LOW);
-  digitalWrite(LedModeSOL, HIGH);
-  digitalWrite(LedModeAUTO, LOW);
+  if (((ValForceMode >> BitForceCA1) & 1) == 1) {
+    digitalWrite(LedModeJN, LedFastBlinkingState);
+  } else {
+    digitalWrite(LedModeJN, LOW);
+  }
+
+  if (((ValForceMode >> BitForceCA2) & 1) == 1) {
+    digitalWrite(LedModeSOL, LedBlinkingState);
+  } else {
+    digitalWrite(LedModeSOL, HIGH);
+  }
+
+  if (((ValForceMode >> BitForceV) & 1) == 1) {
+    digitalWrite(LedModeAUTO, LedFastBlinkingState);
+  } else {
+    digitalWrite(LedModeAUTO, LOW);
+  }
 
   // Clignottement ou Non Led Armement
   if (ModeArm != ModeNoARM)
@@ -721,6 +747,8 @@ void WorkMode_SOL() {
     digitalWrite(LedArm, LOW);
 
   // -------------------------------------
+  // Normal ou ModeArmSimple
+  // LA gestion de SwitchContactSelection se fait au niveau ModeArm
   if (ModeArm != ModeARMDouble) {
     if ((digitalRead(InCurrentSOL) == HIGH)) {
       if (SwitchContactSelection == 0) {
@@ -767,9 +795,25 @@ void WorkMode_SOL() {
 // -------------------------------------------------------------------------------------------
 void WorkMode_Auto() {
 
-  digitalWrite(LedModeJN, LOW);
-  digitalWrite(LedModeAUTO, HIGH);
-  digitalWrite(LedModeSOL, LOW);
+  if (((ValForceMode >> BitForceCA1) & 1) == 1) {
+    digitalWrite(LedModeJN, LedFastBlinkingState);
+  } else {
+    digitalWrite(LedModeJN, LOW);
+  }
+
+  if (((ValForceMode >> BitForceCA2) & 1) == 1) {
+    digitalWrite(LedModeSOL, LedFastBlinkingState);
+  } else {
+    digitalWrite(LedModeSOL, LOW);
+  }
+
+  if (((ValForceMode >> BitForceV) & 1) == 1) {
+    digitalWrite(LedModeAUTO, LedBlinkingState);
+  } else {
+    digitalWrite(LedModeAUTO, HIGH);
+  }
+
+
 
   // Clignottement ou Non Led Armement
   if (ModeArm != ModeNoARM)
@@ -778,6 +822,8 @@ void WorkMode_Auto() {
     digitalWrite(LedArm, LOW);
 
   // -------------------------------------
+  // Normal ou ModeArmSimple
+  // LA gestion de SwitchContactSelection se fait au niveau ModeArm
   if (ModeArm != ModeARMDouble) {
 
     if ((digitalRead(InCurrentSOL) == HIGH) || (digitalRead(InCurrentJN) == HIGH)) {
