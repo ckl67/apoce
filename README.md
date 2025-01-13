@@ -1,7 +1,7 @@
 /* =================================================================
 	Pilote Arduino pour optimiser la gestion de consommation électrique
     Christian Klugesherz
-    Date : 5 janvier 2025 --> Très grosse simplification 
+    Date : 12 janvier 2025 --> Nouvelle approche avec double fonction de boutons
 	
     Le schéma de la carte se trouve dans le répertoire Board
     La simulation se trouve sur
@@ -23,36 +23,27 @@
       * Signal pour piloter contacteur Chauffe Eau 1 - CA1
       * Signal pour piloter contacteur Chauffe Eau 2 - CA2
       * Signal pour piloter contacteur Chargement Voiture - CV
-      * En prévision Signal pour piloter contacteur Chargement - X
 	Bouton :
-	  * BoutonJN
-	  * BoutonSOL
-	  * BoutonAUTO
+	  * BoutonJN --> Permet aussi de forcer CA1
+	  * BoutonSOL--> Permet aussi de forcer CA2
+	  * BoutonAUTO--> Permet aussi de forcer V
     Modes :
 	  Dans le principe, un changement de mode, va re-initialiser le compteur d'armement
-		
-	Les Modes disponibles :
 
-      -------------------------------------------
-      * Mode basculement Valeur des Tempos
-      -------------------------------------------
-      Un appui simultanément sur les 3 boutons  JNR / SOL / Auto permet de modifier 
-	    la valeurs des tempos, entre  
-	    * Mode Réel
-		* Mode simulation
-      
+Les Modes disponibles :
+
 	  -------------------------------------------
       * Mode JN : Jour-Nuit --> Led : Bleue Allumée
       --------------------------------------------
 	 Si ModeArm = 0
         Si signal J/N = 1
-          Basculement entre pilotage "CA1" puis "CA2" 
+            Basculement entre pilotage "CA1" puis "CA2" 
 	 Si ModeArm = 1 
         Si signal J/N = 1
-          Basculement entre pilotage "CA1" puis "CA2" puis "CV"  
+            Basculement entre pilotage "CA1" puis "CA2" puis "CV"  
 		
-     Si signal J/N = 0
-        Pas de pilotage
+    Si signal J/N = 0
+          Pas de pilotage
 		  
       -------------------------------------------
       * Mode SOL : Soleil --> Led Orange Allumée
@@ -60,7 +51,7 @@
     Si ModeArm = 0
         Si signal SOL = 1
           Basculement entre pilotage "CA1" puis "CA2"
-	Si ModeArm = 1 
+	  Si ModeArm = 1 
         Si signal SOL = 1
           Basculement entre pilotage "CA1" puis "CA2" puis "CV"
     Si SOL = 0
@@ -86,7 +77,6 @@
 			--> Nous intégrons la voiture dans le cycle 
 			--> Nous utilisons la variable : SwitchContactSelection
 			définie : ArmDuration
-        ArmDuration_Real = 12 heures
  
       -------------------------------------------
       * Bouton Armement pressé 2X --> Led Blanche Clignotante Rapide
@@ -94,4 +84,12 @@
 			Quelque soit le mode : ModeArm = 2
 				Sans courant de nuit, ni Soleil  : Basculement entre pilotage "CA1" puis "CA2" puis "V" sur une durée 
 					définie : ArmDuration
-            ArmDuration_Real = 12 heures
+
+      -------------------------------------------
+      * Bouton Forcage JN=CA1 ou SOL=CA2 ou AUTO=V 
+      -------------------------------------------
+      Un premier appui sur le bouton va 
+        * Positionner le forcage, 
+      un deuxième va 
+        * Positionner le mode 
+        
